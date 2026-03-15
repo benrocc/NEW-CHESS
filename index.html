@@ -275,6 +275,17 @@ function getVoices() {
   return speechSynthesis.getVoices();
 }
 
+// Known voice name gender mapping
+const KNOWN_FEMALE = ['samantha','victoria','karen','moira','fiona','tessa','kate','serena','shelley','stephanie','nicky','martha','susan','hazel','zira','ava','allison','joana','emma','siri','veena','raveena','mei-jia','ting-ting','yuna','kyoko','lekha','milena','sara','anna','helena','paulina','kanya','premium female','female','woman'];
+const KNOWN_MALE = ['daniel','james','oliver','thomas','aaron','david','alex','fred','gordon','rishi','lee','jorge','ivan','mark','george','luca','xander','diego','premium male','male','man'];
+
+function guessGender(name) {
+  const n = name.toLowerCase();
+  for (const f of KNOWN_FEMALE) { if (n.includes(f)) return 'F'; }
+  for (const m of KNOWN_MALE) { if (n.includes(m)) return 'M'; }
+  return '?';
+}
+
 function buildVoiceList() {
   const list = document.getElementById("voiceList");
   if (!list) return;
@@ -299,7 +310,11 @@ function buildVoiceList() {
     const div = document.createElement("div");
     div.className = "vitem" + (i === voiceIdx ? " active" : "");
     const cleanName = v.name.replace(/Microsoft |Google |com\.google\.android\.tts\//g, '');
-    div.innerHTML = cleanName + '<span class="vlang">' + v.lang + '</span>';
+    const g = guessGender(v.name);
+    const gTag = g === 'F' ? '<span style="color:#ff2d95;margin-right:4px;">♀</span>'
+               : g === 'M' ? '<span style="color:#00f0ff;margin-right:4px;">♂</span>'
+               : '';
+    div.innerHTML = gTag + cleanName + '<span class="vlang">' + v.lang + '</span>';
     div.onclick = () => selectVoice(i);
     list.appendChild(div);
   });

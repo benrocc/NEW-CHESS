@@ -128,18 +128,33 @@ const PV={p:100,n:320,b:330,r:500,q:900,k:20000};
 const FILES=["a","b","c","d","e","f","g","h"];
 
 const SVG_PATHS = {
-  k: `<g><path d="M22.5 11.63V6M20 8h5" stroke-linejoin="miter" style="fill:none;stroke:STROKE;stroke-width:1.5;stroke-linecap:butt"/>
-      <path d="M22.5 25s4.5-7.5 3-10.5c0 0-1-2.5-3-2.5s-3 2.5-3 2.5c-1.5 3 3 10.5 3 10.5" style="fill:FILL;stroke:STROKE;stroke-width:1.5;stroke-linecap:butt;stroke-linejoin:miter"/>
-      <path d="M12.5 37c5.5 3.5 14.5 3.5 20 0v-7s9-4.5 6-10.5c-4-6.5-13.5-3.5-16 4V27v-3.5c-2.5-7.5-12-10.5-16-4-3 6 6 10.5 6 10.5v7" style="fill:FILL;stroke:STROKE;stroke-width:1.5;stroke-linecap:butt"/>
-      <path d="M12.5 30c5.5-3 14.5-3 20 0M12.5 33.5c5.5-3 14.5-3 20 0M12.5 37c5.5-3 14.5-3 20 0" style="fill:none;stroke:STROKE;stroke-width:1.5"/></g>`,
-  q: `<g><circle cx="6" cy="12" r="2.25" style="fill:FILL;stroke:STROKE;stroke-width:1.5"/>
-      <circle cx="14" cy="9" r="2.25" style="fill:FILL;stroke:STROKE;stroke-width:1.5"/>
-      <circle cx="22.5" cy="8" r="2.25" style="fill:FILL;stroke:STROKE;stroke-width:1.5"/>
-      <circle cx="31" cy="9" r="2.25" style="fill:FILL;stroke:STROKE;stroke-width:1.5"/>
-      <circle cx="39" cy="12" r="2.25" style="fill:FILL;stroke:STROKE;stroke-width:1.5"/>
-      <path d="M9 26c8.5-1.5 21-1.5 27 0l2.5-12.5L31 25l-3.5-7-5 6.5-5-6.5-3.5 7-7.5-14L9 26z" style="fill:FILL;stroke:STROKE;stroke-width:1.5;stroke-linecap:butt;stroke-linejoin:round"/>
-      <path d="M9 26c0 2 1.5 2 2.5 4 1 1.5 1 1 .5 3.5-1.5 1-1.5 2.5-1.5 2.5-1.5 1.5.5 2.5.5 2.5 6.5 1 16.5 1 23 0 0 0 1.5-1 0-2.5 0 0 .5-1.5-1-2.5-.5-2.5-.5-2 .5-3.5 1-2 2.5-2 2.5-4-8.5-1.5-18.5-1.5-27 0z" style="fill:FILL;stroke:STROKE;stroke-width:1.5;stroke-linecap:butt"/>
-      <path d="M11.5 30c3.5-1 18.5-1 22 0M12 33.5c6-1 15-1 21 0" style="fill:none;stroke:STROKE;stroke-width:1"/></g>`,
+  k: `<g>
+      <!-- cross -->
+      <rect x="20.5" y="1" width="4" height="10" rx="0.8" style="fill:FILL;stroke:STROKE;stroke-width:1"/>
+      <rect x="16.5" y="3.5" width="12" height="4" rx="0.8" style="fill:FILL;stroke:STROKE;stroke-width:1"/>
+      <!-- dome -->
+      <ellipse cx="22.5" cy="14" rx="7" ry="4" style="fill:FILL;stroke:STROKE;stroke-width:1.5"/>
+      <!-- collar -->
+      <rect x="16" y="17" width="13" height="3" rx="1" style="fill:FILL;stroke:STROKE;stroke-width:1.2"/>
+      <!-- body taper -->
+      <path d="M15 20h15l-1.5 14h-12z" style="fill:FILL;stroke:STROKE;stroke-width:1.5"/>
+      <!-- base -->
+      <rect x="11" y="34" width="23" height="3" rx="1" style="fill:FILL;stroke:STROKE;stroke-width:1.5"/>
+      <rect x="9" y="37" width="27" height="4" rx="1" style="fill:FILL;stroke:STROKE;stroke-width:1.5"/>
+      </g>`,
+  q: `<g>
+      <!-- ball on top -->
+      <circle cx="22.5" cy="4" r="3.5" style="fill:FILL;stroke:STROKE;stroke-width:1.5"/>
+      <!-- dome -->
+      <ellipse cx="22.5" cy="12" rx="7" ry="4" style="fill:FILL;stroke:STROKE;stroke-width:1.5"/>
+      <!-- collar -->
+      <rect x="16" y="15" width="13" height="3" rx="1" style="fill:FILL;stroke:STROKE;stroke-width:1.2"/>
+      <!-- body taper -->
+      <path d="M15 18h15l-1.5 16h-12z" style="fill:FILL;stroke:STROKE;stroke-width:1.5"/>
+      <!-- base -->
+      <rect x="11" y="34" width="23" height="3" rx="1" style="fill:FILL;stroke:STROKE;stroke-width:1.5"/>
+      <rect x="9" y="37" width="27" height="4" rx="1" style="fill:FILL;stroke:STROKE;stroke-width:1.5"/>
+      </g>`,
   r: `<g><path d="M9 39h27v-3H9v3zM12.5 32l1.5-2.5h17l1.5 2.5h-20zM12 36v-4h21v4H12z" style="fill:FILL;stroke:STROKE;stroke-width:1.5;stroke-linejoin:round"/>
       <path d="M14 29.5v-13h17v13H14z" style="fill:FILL;stroke:STROKE;stroke-width:1.5;stroke-linecap:butt;stroke-linejoin:miter"/>
       <path d="M14 16.5L11 14h23l-3 2.5H14zM11 14V9h4v2h5V9h5v2h5V9h4v5H11z" style="fill:FILL;stroke:STROKE;stroke-width:1.5;stroke-linecap:butt"/>
@@ -632,7 +647,9 @@ function render() {
   const maxW = Math.min(window.innerWidth - 32, 480);
   const maxH = window.innerHeight - 220;
   const sq = Math.max(32, Math.min(Math.floor(Math.min(maxW, maxH) / 8), 56));
-  const pSize = Math.max(22, Math.round(sq * 0.78));
+  const baseSize = Math.max(22, Math.round(sq * 0.78));
+  // Scale per piece type: king biggest, pawn smallest
+  const PIECE_SCALE = { k: 1.0, q: 0.92, r: 0.82, b: 0.82, n: 0.82, p: 0.68 };
 
   const bEl = document.getElementById("board");
   bEl.style.gridTemplateColumns = `repeat(8, ${sq}px)`;
@@ -665,6 +682,7 @@ function render() {
     }
     if (cell) {
       const wrap = document.createElement("div");
+      const pSize = Math.round(baseSize * PIECE_SCALE[cell.type]);
       wrap.innerHTML = makeSVG(cell.type, cell.color, pSize);
       wrap.style.display = "flex"; wrap.style.alignItems = "center"; wrap.style.justifyContent = "center";
       div.appendChild(wrap);

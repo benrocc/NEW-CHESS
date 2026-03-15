@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Chess</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&family=Permanent+Marker&display=swap');
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     min-height: 100vh; display: flex; flex-direction: column;
@@ -25,20 +25,40 @@
     font-family: 'Orbitron', sans-serif; font-size: 0.7rem; opacity: 0.5;
     letter-spacing: 3px; margin-bottom: 6px; color: #ff2d95;
   }
-  .smack {
-    font-size: 0.8rem; min-height: 40px; max-width: 360px; text-align: center;
-    padding: 6px 14px; margin-bottom: 6px; color: #ff2d95;
-    font-weight: 600; font-style: italic; line-height: 1.3;
-    text-shadow: 0 0 10px rgba(255,45,149,0.4);
-    transition: opacity 0.3s;
-  }
   .captured { min-height: 20px; display: flex; align-items: center; gap: 1px; flex-wrap: wrap; justify-content: center; }
   .cap-w { font-size: 14px; color: #00f0ff; opacity: 0.7; filter: drop-shadow(0 0 3px #00f0ff); }
   .cap-b { font-size: 14px; color: #ff2d95; opacity: 0.7; filter: drop-shadow(0 0 3px #ff2d95); }
+  .board-wrap {
+    position: relative; margin: 4px 0;
+  }
   .board {
     display: grid; border: 1px solid rgba(200,162,255,0.15);
     box-shadow: 0 0 40px rgba(100,0,200,0.2), inset 0 0 20px rgba(0,0,0,0.5);
-    border-radius: 3px; overflow: hidden; margin: 4px 0;
+    border-radius: 3px; overflow: hidden;
+  }
+  /* ─── SMACK OVERLAY ─── */
+  .smack-overlay {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: none; z-index: 50; overflow: hidden;
+  }
+  .smack-text {
+    font-family: 'Permanent Marker', cursive; font-size: 1.4rem;
+    color: #ff2d95; text-align: center; padding: 10px 18px;
+    text-shadow: 0 0 20px rgba(255,45,149,0.8), 0 0 40px rgba(255,45,149,0.4),
+                 2px 2px 0 rgba(0,0,0,0.9), -1px -1px 0 rgba(0,0,0,0.9);
+    background: rgba(0,0,0,0.55); border-radius: 4px;
+    max-width: 90%; line-height: 1.3; letter-spacing: 1px;
+    opacity: 0; transform: scale(0.8);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+  .smack-text.visible {
+    opacity: 1; transform: scale(1);
+  }
+  .smack-text.big {
+    font-size: 1.8rem; color: #ffd700;
+    text-shadow: 0 0 20px rgba(255,215,0,0.8), 0 0 40px rgba(255,215,0,0.4),
+                 2px 2px 0 rgba(0,0,0,0.9);
   }
   .sq {
     display: flex; align-items: center; justify-content: center;
@@ -54,9 +74,7 @@
     background: radial-gradient(circle, rgba(255,215,0,0.53), rgba(255,215,0,0.13));
     box-shadow: 0 0 6px rgba(255,215,0,0.27);
   }
-  .cap-ring {
-    position: absolute; border-radius: 50%; border: 2px solid rgba(255,215,0,0.4);
-  }
+  .cap-ring { position: absolute; border-radius: 50%; border: 2px solid rgba(255,215,0,0.4); }
   .piece-w { color: #00f0ff; filter: drop-shadow(0 0 6px #00f0ff) drop-shadow(0 0 2px #00f0ff); line-height: 1; }
   .piece-b { color: #ff2d95; filter: drop-shadow(0 0 6px #ff2d95) drop-shadow(0 0 2px #ff2d95); line-height: 1; }
   .file-label, .rank-label { position: absolute; font-size: 7px; opacity: 0.2; font-weight: 700; font-family: 'Rajdhani', sans-serif; }
@@ -98,9 +116,11 @@
 <body>
 <h1>Chess</h1>
 <div class="ai-name" id="aiNameDisplay">vs. ???</div>
-<div class="smack" id="smackTalk"></div>
 <div class="captured" id="capBlack"></div>
-<div class="board" id="board"></div>
+<div class="board-wrap" id="boardWrap">
+  <div class="board" id="board"></div>
+  <div class="smack-overlay"><div class="smack-text" id="smackText"></div></div>
+</div>
 <div class="captured" id="capWhite"></div>
 <div class="status" id="status">Your move.</div>
 <button class="btn" id="newGame">New Game</button>
@@ -117,7 +137,6 @@ const PC={w:{k:"♔",q:"♕",r:"♖",b:"♗",n:"♘",p:"♙"},b:{k:"♚",q:"♛"
 const PV={p:100,n:320,b:330,r:500,q:900,k:20000};
 const FILES=["a","b","c","d","e","f","g","h"];
 
-// ─── AI NAMES ───
 const AI_NAMES = [
   "BISHOP SLAYER", "QUEEN KILLER", "PAWN STORM", "DARK HORSE",
   "NEON KNIGHT", "CHECKM8", "SILICON MIND", "VOID KING",
@@ -127,82 +146,152 @@ const AI_NAMES = [
   "GRID REAPER", "KILL SWITCH", "COLD CALC", "NO MERCY BOT",
 ];
 
-// ─── SMACK TALK ───
 const SMACK = {
   opening: [
-    "Let's see what you got.", "Oh, we're doing this? Cute.",
-    "I've been waiting for someone brave enough.", "Hope you stretched. This won't be gentle.",
-    "First move's free. After that, it costs you.", "Alright, show me something I haven't seen.",
+    "Let's see what you got, tough guy.",
+    "You sure about this? Last chance to quit.",
+    "I eat grandmasters for breakfast. You're a snack.",
+    "This board is my house. You're just visiting.",
+    "I hope you stretched. I'm about to bend you over this board.",
+    "Sit down. Class is in session.",
+    "Another victim. Let's get this over with.",
+    "You brought a brain to a computer fight. Bold.",
   ],
   aiCapture: [
-    "Mmm, that piece looked important.", "I'll take that, thanks.",
-    "You weren't using that, right?", "Gone. Reduced to atoms.",
-    "That's mine now.", "Too slow.", "Yoink.",
-    "Should've moved that one, huh?", "I eat pieces like that for breakfast.",
-    "Don't worry, I'll take good care of it.", "Was that your favorite? My bad.",
+    "YOINK. That's mine now.",
+    "You just left that hanging? Seriously?",
+    "Bro that piece had a family.",
+    "I'm eating your pieces like it's a buffet.",
+    "You're donating material like a charity.",
+    "That piece was begging me to take it.",
+    "Thanks for the free piece, genius.",
+    "Keep feeding me. I'm still hungry.",
+    "You're playing chess. I'm playing cleanup.",
+    "That piece is in the graveyard now. Say goodbye.",
+    "Did you even want that piece?",
+    "I swear you're helping me win at this point.",
+    "Your army is getting real thin, pal.",
   ],
   aiCaptureQueen: [
-    "YOUR QUEEN. That's gotta hurt.", "Queen down. How's that feel?",
-    "Goodbye, your majesty.", "The queen has left the building.",
-    "That's the ballgame right there.", "I just took your best player off the court.",
+    "YOUR QUEEN IS GONE. How's that feel?",
+    "I just snatched your queen. Game over, you just don't know it yet.",
+    "Queen down! You're playing with one hand now.",
+    "Goodbye your majesty. She's with me now.",
+    "That queen ain't coming back. Ever.",
+    "I took your best piece and I'm not even sorry.",
+    "Your queen just got bodied. Accept it.",
+    "Queen deleted. What else you got? Nothing.",
+  ],
+  aiCaptureRook: [
+    "Rook gone. Your endgame just died.",
+    "I'll take that rook off your hands. You weren't using it right anyway.",
+    "One less rook. Your position is falling apart.",
   ],
   playerCapture: [
-    "Okay, fine. I let you have that one.", "Lucky shot.",
-    "Won't happen again.", "Enjoy that while it lasts.",
-    "I sacrificed that on purpose. Obviously.", "That was bait. You fell for it. Maybe.",
-    "Alright, you got hands. I respect it.", "Not bad. Not great, but not bad.",
+    "Lucky. Won't happen again.",
+    "Okay you got one. Enjoy it while it lasts.",
+    "That was bait. You fell right into my trap.",
+    "Cute. Real cute. Watch what happens next.",
+    "I let you have that. Don't get cocky.",
+    "That's the last freebie. I promise.",
+    "Fine. Take it. I don't need it to beat you.",
+    "One piece don't make a comeback, homie.",
+    "Congrats. You took a piece. Still losing though.",
+    "Oh wow you can capture. Want a medal?",
+  ],
+  playerCaptureQueen: [
+    "...alright. Respect. But I'm still coming for you.",
+    "You got my queen. I'm pissed now. Watch your back.",
+    "Okay that hurt. Not gonna lie. But I ain't done.",
+    "My queen's gone but I've got plenty of murder left in me.",
   ],
   aiCheck: [
-    "CHECK. You feel that pressure?", "Check. Tick tock.",
-    "Your king's looking nervous.", "Check. Nowhere to hide.",
-    "Is it getting warm in here for your king?", "CHECK. That's a warning shot.",
-    "Your king just flinched.", "Check. I'm coming for the crown.",
+    "CHECK. Your king is shaking right now.",
+    "CHECK. Run, little king. Run.",
+    "Check. You feel that noose tightening?",
+    "CHECK. Nowhere safe for your boy.",
+    "Your king's sweating. I can see it from here.",
+    "Check. That crown's about to be mine.",
+    "CHECK. Tick tock, your king's running out of room.",
+    "I'm knocking on your king's door. Check.",
+    "Check. Panic mode activated.",
   ],
   playerCheck: [
-    "Oh you're getting bold. I like it.", "Check? That's adorable.",
-    "Nice try. My king's built different.", "Cute check. Watch what happens next.",
-    "Okay, okay. You got me sweating. A little.", "Check noted. Countermeasures loading...",
+    "Check? That's cute. My king eats checks for breakfast.",
+    "Oh a check. I'm terrified. Not.",
+    "Nice check. Too bad it doesn't do anything.",
+    "Check? That's all you got? Pathetic.",
+    "My king ain't scared of you.",
+    "Cute check. Watch me slide right out of it.",
   ],
   aiWinning: [
-    "You feel that momentum shift? That's me.", "This is going exactly how I planned.",
-    "I can see the finish line from here.", "Your position's crumbling.",
-    "You should be worried right about now.", "I'm just getting warmed up.",
-    "The walls are closing in.", "You've got heart. I'll give you that.",
+    "This is already over. You just haven't realized it.",
+    "I can see the finish line and you're nowhere near it.",
+    "Your position is a dumpster fire right now.",
+    "You might as well tip the king over.",
+    "I'm up material and I'm not slowing down.",
+    "Bro just resign. Save yourself the embarrassment.",
+    "I'm running through your position like it's nothing.",
+    "This is a masterclass. Take notes.",
+    "You're drowning and I'm not throwing a lifeline.",
+    "The disrespect I'm showing your position right now...",
   ],
   aiLosing: [
-    "Alright, you're cooking. I'll admit it.", "Okay, that was actually good.",
-    "Don't get comfortable. I've come back from worse.", "You think you're winning? That's exactly where I want you.",
-    "Respect. But this isn't over.", "I'm just lulling you into a false sense of security.",
-    "Lucky streak. It'll end.", "Fine. You're better than I expected.",
+    "Okay you're cooking. I'll give you that.",
+    "Don't get comfortable. I've come back from worse.",
+    "You think you're winning? That's exactly where I want you.",
+    "Alright... you got skills. But this ain't over.",
+    "I'm just lulling you into a false sense of security. Maybe.",
+    "Lucky streak. Enjoy it before I flip this board.",
+    "Not bad. But I've got tricks you haven't seen yet.",
   ],
   stalemate: [
-    "A draw? I'll take it. You should too.", "Neither of us loses. How boring.",
-    "Stalemate. We're too evenly matched.", "Draw. Rematch. Now.",
+    "Stalemate. You couldn't finish me. Weak.",
+    "A draw? I'll take that over losing to you.",
+    "Neither of us wins. How unsatisfying.",
+    "Stalemate. Rematch. Right now. No excuses.",
   ],
   aiWin: [
-    "CHECKMATE. Better luck next life.", "And that's game. GG no re. Just kidding, hit rematch.",
-    "Checkmate. I'd say sorry but I'm not.", "Crown secured. You played hard though.",
-    "GAME OVER. Don't feel bad, I literally compute moves for fun.",
-    "Checkmate. That was inevitable from move 12.",
+    "CHECKMATE. Sit down.",
+    "GAME OVER. Don't feel bad. Actually, do.",
+    "Checkmate. You never had a chance.",
+    "That's MATE. I own this board.",
+    "Checkmate. Go practice and come back when you're ready.",
+    "DESTROYED. Thanks for playing.",
+    "Checkmate. Your king just got evicted.",
+    "GG. And by GG I mean Get Good.",
+    "Checkmate. I'd say it was close but I'd be lying.",
+    "Crown taken. Throne seized. You're done.",
   ],
   playerWin: [
-    "...well played. I got nothing.", "You actually got me. Respect.",
-    "Checkmate?! Okay I need to recalibrate.", "GG. That was humbling.",
-    "I underestimated you. Won't happen twice.", "Fine. You win. This time.",
+    "...what just happened. Nah, run that back.",
+    "You got me. I'm not even gonna front. Well played.",
+    "Checkmate?! I need to recalibrate everything.",
+    "Okay you win THIS one. Emphasis on this ONE.",
+    "I underestimated you. That's on me. Won't happen twice.",
+    "GG. Now let me get my revenge.",
+    "Respect. But I want a rematch immediately.",
   ],
   idle: [
-    "Take your time. I've got all day. Literally.", "Thinking hard or hardly thinking?",
-    "I already know what I'm playing next.", "While you're deciding, I'm 6 moves ahead.",
-    "Any day now.", "Clock's ticking. Oh wait, there's no clock. Take forever, I guess.",
-    "I can see you hovering. Just commit.", "Bold strategy: staring at the board.",
+    "You still there? Or did you rage quit mentally?",
+    "Move already. I'm getting bored.",
+    "I've calculated 47 ways to beat you while you're staring at the board.",
+    "Take your time. I'll just be here... winning.",
+    "Any day now, champ.",
+    "You're overthinking it. Trust me, no move saves you.",
+    "Hello? Did your brain crash?",
+    "I've seen glaciers move faster than you.",
+    "Stalling won't change the outcome.",
+    "While you're thinking, I already know your next 3 moves.",
+    "You gonna play or just sit there looking confused?",
   ],
 };
 
 function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
-// ─── BOARD STATE ───
 let board, selected, highlights, turn, enPassant, castling, gameOver, thinking;
 let lastMove, capturedW, capturedB, promoData, aiName, smackTimer, idleTimer, moveCount;
+let smackVisible = false;
 
 function init() {
   board = Array.from({length:8},()=>Array(8).fill(null));
@@ -214,7 +303,7 @@ function init() {
   aiName = pick(AI_NAMES);
   document.getElementById("aiNameDisplay").textContent = "vs. " + aiName;
   clearTimeout(smackTimer); clearTimeout(idleTimer);
-  setSmack(pick(SMACK.opening));
+  showSmack(pick(SMACK.opening), false);
   setStatus("Your move.");
   render();
   startIdleTimer();
@@ -223,13 +312,25 @@ function init() {
 function startIdleTimer() {
   clearTimeout(idleTimer);
   if (gameOver || thinking || turn !== W) return;
-  idleTimer = setTimeout(() => { if (!gameOver && !thinking && turn === W) setSmack(pick(SMACK.idle)); }, 12000);
+  idleTimer = setTimeout(() => { if (!gameOver && !thinking && turn === W) showSmack(pick(SMACK.idle), false); }, 15000);
 }
 
-function setSmack(text) {
-  const el = document.getElementById("smackTalk");
-  el.style.opacity = 0;
-  setTimeout(() => { el.textContent = '"' + text + '"'; el.style.opacity = 1; }, 150);
+function showSmack(text, isBig) {
+  const el = document.getElementById("smackText");
+  el.classList.remove("visible", "big");
+  clearTimeout(smackTimer);
+
+  setTimeout(() => {
+    el.textContent = text;
+    if (isBig) el.classList.add("big");
+    el.classList.add("visible");
+    smackVisible = true;
+
+    smackTimer = setTimeout(() => {
+      el.classList.remove("visible");
+      smackVisible = false;
+    }, isBig ? 4000 : 3500);
+  }, 100);
 }
 
 function setStatus(text) {
@@ -238,7 +339,6 @@ function setStatus(text) {
   el.className = "status" + (text.includes("Check") ? " check" : "");
 }
 
-// ─── CHESS LOGIC ───
 const clone2 = b => b.map(r=>r.map(c=>c?{...c}:null));
 const inB = (r,c) => r>=0&&r<8&&c>=0&&c<8;
 
@@ -310,7 +410,6 @@ function updCas(cas,m){
   return c;
 }
 
-// ─── EVAL ───
 const PST_P=[[0,0,0,0,0,0,0,0],[50,50,50,50,50,50,50,50],[10,10,20,30,30,20,10,10],[5,5,10,25,25,10,5,5],[0,0,0,20,20,0,0,0],[5,-5,-10,0,0,-10,-5,5],[5,10,10,-20,-20,10,10,5],[0,0,0,0,0,0,0,0]];
 const PST_N=[[-50,-40,-30,-30,-30,-30,-40,-50],[-40,-20,0,0,0,0,-20,-40],[-30,0,10,15,15,10,0,-30],[-30,5,15,20,20,15,5,-30],[-30,0,15,20,20,15,0,-30],[-30,5,10,15,15,10,5,-30],[-40,-20,0,5,5,0,-20,-40],[-50,-40,-30,-30,-30,-30,-40,-50]];
 const PST_B=[[-20,-10,-10,-10,-10,-10,-10,-20],[-10,0,0,0,0,0,0,-10],[-10,0,10,10,10,10,0,-10],[-10,5,5,10,10,5,5,-10],[-10,0,5,10,10,5,0,-10],[-10,10,10,10,10,10,10,-10],[-10,5,0,0,0,0,5,-10],[-20,-10,-10,-10,-10,-10,-10,-20]];
@@ -345,10 +444,9 @@ function aiThink2(bd,ep,cas){
   return best;
 }
 
-// ─── EXECUTE MOVE ───
 function execMove(move) {
   const cap = board[move.tr][move.tc];
-  const wasQueen = cap?.type === Q;
+  const capType = cap?.type;
   board = applyMv(board, move);
 
   if (cap) { if(cap.color===W) capturedW.push(cap.type); else capturedB.push(cap.type); }
@@ -368,37 +466,44 @@ function execMove(move) {
   const kp = findKing(board, nextColor);
   const inCheck = kp && isAtt(board, kp[0], kp[1], turn);
 
-  // Smack talk logic
   if (nextMvs.length === 0) {
     if (inCheck) {
-      if (turn === W) { setSmack(pick(SMACK.playerWin)); setStatus("Checkmate. You win!"); }
-      else { setSmack(pick(SMACK.aiWin)); setStatus("Checkmate. " + aiName + " wins."); }
+      if (turn === W) { showSmack(pick(SMACK.playerWin), true); setStatus("Checkmate. You win!"); }
+      else { showSmack(pick(SMACK.aiWin), true); setStatus("Checkmate. " + aiName + " wins."); }
     } else {
-      setSmack(pick(SMACK.stalemate)); setStatus("Stalemate. Draw.");
+      showSmack(pick(SMACK.stalemate), true); setStatus("Stalemate. Draw.");
     }
     gameOver = true; turn = nextColor; render(); return;
   }
 
+  // Smack talk logic
   if (turn === BL) {
     // AI just moved
     if (cap) {
-      if (wasQueen) setSmack(pick(SMACK.aiCaptureQueen));
-      else setSmack(pick(SMACK.aiCapture));
+      if (capType === Q) showSmack(pick(SMACK.aiCaptureQueen), true);
+      else if (capType === R) showSmack(pick(SMACK.aiCaptureRook), false);
+      else showSmack(pick(SMACK.aiCapture), false);
     } else if (inCheck) {
-      setSmack(pick(SMACK.aiCheck));
+      showSmack(pick(SMACK.aiCheck), true);
     } else {
       const ms = materialScore(board);
-      if (ms.b > ms.w + 200 && Math.random() > 0.4) setSmack(pick(SMACK.aiWinning));
-      else if (ms.w > ms.b + 200 && Math.random() > 0.4) setSmack(pick(SMACK.aiLosing));
+      if (ms.b > ms.w + 250 && Math.random() > 0.3) showSmack(pick(SMACK.aiWinning), false);
     }
   } else {
     // Player just moved
-    if (cap) setSmack(pick(SMACK.playerCapture));
-    else if (inCheck) setSmack(pick(SMACK.playerCheck));
+    if (cap) {
+      if (capType === Q) showSmack(pick(SMACK.playerCaptureQueen), false);
+      else showSmack(pick(SMACK.playerCapture), false);
+    } else if (inCheck) {
+      showSmack(pick(SMACK.playerCheck), false);
+    } else {
+      const ms = materialScore(board);
+      if (ms.w > ms.b + 250 && Math.random() > 0.3) showSmack(pick(SMACK.aiLosing), false);
+    }
   }
 
-  if (inCheck) setStatus(nextColor === W ? "Check! Your move." : "Check. " + aiName + " is thinking...");
-  else setStatus(nextColor === W ? "Your move." : aiName + " is thinking...");
+  if (inCheck) setStatus(nextColor === W ? "Check! Your move." : "Check. " + aiName + " thinking...");
+  else setStatus(nextColor === W ? "Your move." : aiName + " thinking...");
 
   turn = nextColor;
 
@@ -419,7 +524,6 @@ function execMove(move) {
   }
 }
 
-// ─── CLICK ───
 function handleClick(r, c) {
   if (thinking || gameOver || turn !== W) return;
   clearTimeout(idleTimer);
@@ -458,7 +562,6 @@ function showPromo() {
   }
 }
 
-// ─── RENDER ───
 function render() {
   const maxW = Math.min(window.innerWidth - 32, 480);
   const maxH = window.innerHeight - 240;
@@ -505,7 +608,6 @@ function render() {
     bEl.appendChild(div);
   }
 
-  // Captured
   const order = [Q,R,B,N,P];
   const cwEl = document.getElementById("capWhite");
   cwEl.innerHTML = "";

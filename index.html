@@ -160,6 +160,18 @@
     background: rgba(255,45,149,0.1); color: #ff2d95; margin-top: 8px;
     transition: all 0.15s;
   }
+  .vitem {
+    padding: 8px 10px; cursor: pointer; font-family: 'Rajdhani', sans-serif;
+    font-size: 0.75rem; font-weight: 600; color: rgba(255,255,255,0.5);
+    border-bottom: 1px solid rgba(255,255,255,0.05); transition: all 0.12s;
+  }
+  .vitem:last-child { border-bottom: none; }
+  .vitem:active, .vitem.active {
+    background: rgba(255,45,149,0.15); color: #ff2d95;
+  }
+  .vitem .vlang {
+    font-size: 0.6rem; opacity: 0.5; margin-left: 6px;
+  }
 </style>
 </head>
 <body>
@@ -173,25 +185,13 @@
 <div class="voice-panel" id="voicePanel">
   <div class="voice-box">
     <h2>VOICE SETTINGS</h2>
-    <div class="voice-label">Gender</div>
-    <div class="voice-opt-row">
-      <div class="voice-opt active" id="optWoman" onclick="setGender('woman')">WOMAN</div>
-      <div class="voice-opt" id="optMan" onclick="setGender('man')">MAN</div>
-    </div>
+    <div class="voice-label">Pick a voice</div>
+    <div id="voiceList" style="max-height:200px;overflow-y:auto;margin-bottom:14px;border:1px solid rgba(255,255,255,0.1);border-radius:6px;"></div>
     <div class="voice-label">Speed</div>
     <div class="voice-opt-row">
       <div class="voice-opt" id="optSlow" onclick="setSpeed('slow')">SLOW</div>
       <div class="voice-opt active" id="optNormal" onclick="setSpeed('normal')">NORMAL</div>
       <div class="voice-opt" id="optFast" onclick="setSpeed('fast')">FAST</div>
-    </div>
-    <div class="voice-label">Accent</div>
-    <div class="voice-opt-wrap" id="accentRow">
-      <div class="voice-opt-sm active" id="accBrit" onclick="setAccent('british')">BRITISH</div>
-      <div class="voice-opt-sm" id="accAus" onclick="setAccent('australian')">AUSSIE</div>
-      <div class="voice-opt-sm" id="accAmer" onclick="setAccent('american')">AMERICAN</div>
-      <div class="voice-opt-sm" id="accIndian" onclick="setAccent('indian')">INDIAN</div>
-      <div class="voice-opt-sm" id="accSA" onclick="setAccent('south_african')">S. AFRICAN</div>
-      <div class="voice-opt-sm" id="accIrish" onclick="setAccent('irish')">IRISH</div>
     </div>
     <button class="voice-test" onclick="testVoice()">TEST VOICE</button>
     <button class="voice-go" onclick="confirmVoice()">DONE</button>
@@ -265,77 +265,74 @@ function makeCapSVG(type, color) { return makeSVG(type, color, 18); }
 // ─── VOICE ───
 let voiceOn = false;
 let chosenVoice = null;
-let voiceGender = 'woman';
 let voiceSpeed = 'normal';
-let voiceAccent = 'british';
+let voiceIdx = -1;
 const hasSpeech = typeof speechSynthesis !== 'undefined';
 const SPEED_MAP = { slow: 0.75, normal: 0.92, fast: 1.15 };
 
-// Accent to language code mapping
-const ACCENT_LANGS = {
-  british: ['en-GB'],
-  australian: ['en-AU'],
-  american: ['en-US'],
-  indian: ['en-IN', 'hi-IN'],
-  south_african: ['en-ZA'],
-  irish: ['en-IE'],
-};
-
-const FEMALE_NAMES = ['female','samantha','victoria','karen','moira','fiona','tessa','kate','serena','shelley','stephanie','nicky','martha','susan','hazel','zira','ava','allison','joana','emma','siri','veena','raveena'];
-const MALE_NAMES = ['male','daniel','james','oliver','thomas','aaron','david','alex','fred','gordon','rishi','lee','jorge','ivan','microsoft david','microsoft mark','microsoft george'];
-
-function getAllVoices() {
+function getVoices() {
   if (!hasSpeech) return [];
   return speechSynthesis.getVoices();
 }
 
-function findBestVoice(gender, accent) {
-  const all = getAllVoices();
-  if (all.length === 0) return null;
-  const langs = ACCENT_LANGS[accent] || ['en-GB'];
-  const names = gender === 'woman' ? FEMALE_NAMES : MALE_NAMES;
-  const genderKw = gender === 'woman' ? 'female' : 'male';
+function buildVoiceList() {
+  const list = document.getElementById("voiceList");
+  if (!list) return;
+  list.innerHTML = "";
+  const voices = getVoices();
+  if (voices.length === 0) {
+    list.innerHTML = '<div style="padding:10px;font-size:0.7rem;opacity:0.4;">No voices found. Try opening in Chrome.</div>';
+    return;
+  }
 
-  // Pass 1: match gender name + accent lang
-  for (const lang of langs) {
-    for (const name of names) {
-      const v = all.find(v => v.name.toLowerCase().includes(name) && v.lang.startsWith(lang.split('-')[0]) && v.lang.includes(lang.split('-')[1] || ''));
-      if (v) return v;
-    }
+  // Sort: English first, then by language, then name
+  const sorted = voices.map((v, i) => ({v, i})).sort((a, b) => {
+    const aEn = a.v.lang.startsWith('en') ? 0 : 1;
+    const bEn = b.v.lang.startsWith('en') ? 0 : 1;
+    if (aEn !== bEn) return aEn - bEn;
+    const lc = a.v.lang.localeCompare(b.v.lang);
+    if (lc !== 0) return lc;
+    return a.v.name.localeCompare(b.v.name);
+  });
+
+  sorted.forEach(({v, i}) => {
+    const div = document.createElement("div");
+    div.className = "vitem" + (i === voiceIdx ? " active" : "");
+    const cleanName = v.name.replace(/Microsoft |Google |com\.google\.android\.tts\//g, '');
+    div.innerHTML = cleanName + '<span class="vlang">' + v.lang + '</span>';
+    div.onclick = () => selectVoice(i);
+    list.appendChild(div);
+  });
+
+  // Auto-select first English voice if nothing selected
+  if (voiceIdx === -1) {
+    const firstEn = sorted.find(({v}) => v.lang.startsWith('en'));
+    if (firstEn) selectVoice(firstEn.i);
   }
-  // Pass 2: match accent lang + gender keyword
-  for (const lang of langs) {
-    const v = all.find(v => v.lang === lang && v.name.toLowerCase().includes(genderKw));
-    if (v) return v;
-  }
-  // Pass 3: any voice matching accent lang
-  for (const lang of langs) {
-    const v = all.find(v => v.lang === lang);
-    if (v) return v;
-  }
-  // Pass 4: any English voice matching gender
-  for (const name of names) {
-    const v = all.find(v => v.name.toLowerCase().includes(name) && v.lang.startsWith('en'));
-    if (v) return v;
-  }
-  // Fallback
-  return all.find(v => v.lang.startsWith('en')) || all[0] || null;
 }
 
-function refreshVoice() {
-  chosenVoice = findBestVoice(voiceGender, voiceAccent);
+function selectVoice(idx) {
+  const voices = getVoices();
+  if (!voices[idx]) return;
+  voiceIdx = idx;
+  chosenVoice = voices[idx];
+  // Update UI
+  const items = document.querySelectorAll(".vitem");
+  const sorted = voices.map((v, i) => ({v, i})).sort((a, b) => {
+    const aEn = a.v.lang.startsWith('en') ? 0 : 1;
+    const bEn = b.v.lang.startsWith('en') ? 0 : 1;
+    if (aEn !== bEn) return aEn - bEn;
+    const lc = a.v.lang.localeCompare(b.v.lang);
+    if (lc !== 0) return lc;
+    return a.v.name.localeCompare(b.v.name);
+  });
+  items.forEach((el, j) => {
+    el.className = "vitem" + (sorted[j].i === voiceIdx ? " active" : "");
+  });
 }
 
 if (hasSpeech && speechSynthesis.onvoiceschanged !== undefined) {
-  speechSynthesis.onvoiceschanged = refreshVoice;
-}
-refreshVoice();
-
-function setGender(g) {
-  voiceGender = g;
-  document.getElementById("optWoman").className = "voice-opt" + (g === 'woman' ? " active" : "");
-  document.getElementById("optMan").className = "voice-opt" + (g === 'man' ? " active" : "");
-  refreshVoice();
+  speechSynthesis.onvoiceschanged = buildVoiceList;
 }
 
 function setSpeed(s) {
@@ -345,24 +342,15 @@ function setSpeed(s) {
   document.getElementById("optFast").className = "voice-opt" + (s === 'fast' ? " active" : "");
 }
 
-function setAccent(a) {
-  voiceAccent = a;
-  const ids = {british:'accBrit',australian:'accAus',american:'accAmer',indian:'accIndian',south_african:'accSA',irish:'accIrish'};
-  Object.keys(ids).forEach(k => {
-    document.getElementById(ids[k]).className = "voice-opt-sm" + (k === a ? " active" : "");
-  });
-  refreshVoice();
-}
-
 function testVoice() {
-  if (!hasSpeech) return;
-  refreshVoice();
+  if (!hasSpeech || !chosenVoice) return;
   try {
     speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance("Checkmate. Get off my board, you absolute muppet.");
-    if (chosenVoice) { u.voice = chosenVoice; u.lang = chosenVoice.lang; } else { u.lang = "en-GB"; }
+    const u = new SpeechSynthesisUtterance("Checkmate. Get off my board you absolute muppet.");
+    u.voice = chosenVoice;
+    u.lang = chosenVoice.lang;
     u.rate = SPEED_MAP[voiceSpeed];
-    u.pitch = voiceGender === 'woman' ? 1.05 : 0.85;
+    u.pitch = 1.0;
     speechSynthesis.speak(u);
   } catch(e) {}
 }
@@ -382,8 +370,8 @@ function toggleVoice() {
     try {
       const u = new SpeechSynthesisUtterance(""); u.volume = 0;
       speechSynthesis.speak(u);
-      setTimeout(refreshVoice, 100);
     } catch(e) {}
+    setTimeout(buildVoiceList, 150);
     document.getElementById("voicePanel").classList.add("show");
   } else {
     document.getElementById("voicePanel").classList.remove("show");
@@ -396,10 +384,10 @@ function speakSmack(text) {
   try {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    if (!chosenVoice) refreshVoice();
+    if (!chosenVoice && voiceIdx === -1) buildVoiceList();
     if (chosenVoice) { u.voice = chosenVoice; u.lang = chosenVoice.lang; } else { u.lang = "en-GB"; }
     u.rate = SPEED_MAP[voiceSpeed];
-    u.pitch = voiceGender === 'woman' ? 1.05 : 0.85;
+    u.pitch = 1.0;
     speechSynthesis.speak(u);
   } catch(e) {}
 }

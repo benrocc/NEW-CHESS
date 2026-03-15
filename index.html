@@ -111,21 +111,46 @@
   }
   .promo-btn:hover { background: rgba(0,240,255,0.2); }
   .piece-svg { filter: drop-shadow(0 0 4px var(--glow)); pointer-events: none; }
-  .voice-select {
-    font-family: 'Rajdhani', sans-serif; font-size: 0.65rem; font-weight: 600;
-    padding: 3px 6px; border-radius: 4px; cursor: pointer;
-    background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.6);
-    border: 1px solid rgba(255,255,255,0.15); max-width: 160px;
-    appearance: none; -webkit-appearance: none;
+  .voice-panel {
+    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.8); z-index: 200;
+    justify-content: center; align-items: center;
   }
-  .voice-select option { background: #1a1125; color: #e0e0e0; }
-  .voice-row { display: none; gap: 6px; align-items: center; margin-bottom: 4px; }
-  .voice-row.show { display: flex; }
-  .test-btn {
-    font-family: 'Rajdhani', sans-serif; font-size: 0.55rem; font-weight: 700;
-    padding: 3px 8px; border-radius: 3px; cursor: pointer;
-    background: rgba(255,45,149,0.15); color: #ff2d95;
-    border: 1px solid rgba(255,45,149,0.3); letter-spacing: 1px;
+  .voice-panel.show { display: flex; }
+  .voice-box {
+    background: #1a1125; border: 1px solid rgba(255,45,149,0.3); border-radius: 12px;
+    padding: 20px 24px; width: 280px; text-align: center;
+  }
+  .voice-box h2 {
+    font-family: 'Orbitron', sans-serif; font-size: 0.8rem; font-weight: 700;
+    color: #ff2d95; letter-spacing: 3px; margin-bottom: 16px;
+  }
+  .voice-label {
+    font-size: 0.7rem; font-weight: 600; color: rgba(255,255,255,0.5);
+    letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; text-align: left;
+  }
+  .voice-opt-row { display: flex; gap: 8px; margin-bottom: 14px; }
+  .voice-opt {
+    flex: 1; padding: 8px 0; border-radius: 6px; cursor: pointer;
+    font-family: 'Rajdhani', sans-serif; font-size: 0.8rem; font-weight: 700;
+    border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.5); transition: all 0.15s; text-align: center;
+  }
+  .voice-opt.active { border-color: #ff2d95; color: #ff2d95; background: rgba(255,45,149,0.15); }
+  .voice-go {
+    width: 100%; padding: 10px 0; border-radius: 6px; cursor: pointer;
+    font-family: 'Orbitron', sans-serif; font-size: 0.7rem; font-weight: 700;
+    letter-spacing: 2px; border: 1px solid rgba(0,240,255,0.4);
+    background: rgba(0,240,255,0.1); color: #00f0ff; margin-top: 6px;
+    transition: all 0.15s;
+  }
+  .voice-go:hover { background: rgba(0,240,255,0.2); }
+  .voice-test {
+    width: 100%; padding: 8px 0; border-radius: 6px; cursor: pointer;
+    font-family: 'Rajdhani', sans-serif; font-size: 0.7rem; font-weight: 700;
+    letter-spacing: 1px; border: 1px solid rgba(255,45,149,0.3);
+    background: rgba(255,45,149,0.1); color: #ff2d95; margin-top: 8px;
+    transition: all 0.15s;
   }
 </style>
 </head>
@@ -135,9 +160,25 @@
 <div class="controls">
   <button class="voice-btn off" id="voiceToggle" onclick="toggleVoice()">VOICE: OFF</button>
 </div>
-<div class="voice-row" id="voiceRow">
-  <select class="voice-select" id="voiceSelect" onchange="pickVoice()"></select>
-  <button class="test-btn" onclick="testVoice()">TEST</button>
+
+<!-- Voice Settings Panel -->
+<div class="voice-panel" id="voicePanel">
+  <div class="voice-box">
+    <h2>VOICE SETTINGS</h2>
+    <div class="voice-label">Gender</div>
+    <div class="voice-opt-row">
+      <div class="voice-opt active" id="optWoman" onclick="setGender('woman')">WOMAN</div>
+      <div class="voice-opt" id="optMan" onclick="setGender('man')">MAN</div>
+    </div>
+    <div class="voice-label">Speed</div>
+    <div class="voice-opt-row">
+      <div class="voice-opt" id="optSlow" onclick="setSpeed('slow')">SLOW</div>
+      <div class="voice-opt active" id="optNormal" onclick="setSpeed('normal')">NORMAL</div>
+      <div class="voice-opt" id="optFast" onclick="setSpeed('fast')">FAST</div>
+    </div>
+    <button class="voice-test" onclick="testVoice()">TEST VOICE</button>
+    <button class="voice-go" onclick="confirmVoice()">DONE</button>
+  </div>
 </div>
 <div class="captured" id="capBlack"></div>
 <div class="board-wrap" id="boardWrap">
@@ -207,87 +248,101 @@ function makeCapSVG(type, color) { return makeSVG(type, color, 18); }
 // ─── VOICE ───
 let voiceOn = false;
 let chosenVoice = null;
+let voiceGender = 'woman';
+let voiceSpeed = 'normal';
 const hasSpeech = typeof speechSynthesis !== 'undefined';
+const SPEED_MAP = { slow: 0.75, normal: 0.92, fast: 1.15 };
 
-function populateVoices() {
-  if (!hasSpeech) return;
-  const voices = speechSynthesis.getVoices();
-  const sel = document.getElementById("voiceSelect");
-  sel.innerHTML = "";
-  // Filter to English voices only
-  const enVoices = voices.filter(v => v.lang.startsWith('en'));
-  if (enVoices.length === 0) return;
+// Known female voice name fragments
+const FEMALE_NAMES = ['female','samantha','victoria','karen','moira','fiona','tessa','kate','serena','shelley','stephanie','nicky','martha','susan','hazel','zira','ava','allison','joana','emma','siri'];
+// Known male voice name fragments  
+const MALE_NAMES = ['male','daniel','james','oliver','thomas','aaron','david','alex','fred','gordon','rishi','lee','jorge','ivan','google uk english male','microsoft david','microsoft mark','microsoft george'];
 
-  // Sort: prefer GB/AU first, then by name
-  enVoices.sort((a, b) => {
-    const aGB = a.lang.includes('GB') || a.lang.includes('AU') ? 0 : 1;
-    const bGB = b.lang.includes('GB') || b.lang.includes('AU') ? 0 : 1;
-    if (aGB !== bGB) return aGB - bGB;
-    return a.name.localeCompare(b.name);
-  });
-
-  enVoices.forEach((v, i) => {
-    const opt = document.createElement("option");
-    opt.value = i;
-    opt.textContent = v.name.replace(/Microsoft |Google /g, '') + " (" + v.lang + ")";
-    opt.dataset.idx = voices.indexOf(v);
-    sel.appendChild(opt);
-  });
-
-  // Auto-pick best: look for natural/premium English female
-  const prefs = ['Google UK English Female','Martha','Samantha','Karen','Moira','Fiona','Kate','Serena','Shelley','Stephanie','Nicky','Microsoft Hazel','Microsoft Susan'];
-  for (const pref of prefs) {
-    const idx = enVoices.findIndex(v => v.name.includes(pref));
-    if (idx !== -1) { sel.value = idx; pickVoice(); return; }
-  }
-  // Fallback: first en-GB
-  const gbIdx = enVoices.findIndex(v => v.lang.includes('GB'));
-  if (gbIdx !== -1) { sel.value = gbIdx; }
-  pickVoice();
+function getAllEnglishVoices() {
+  if (!hasSpeech) return [];
+  return speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
 }
 
-function pickVoice() {
-  if (!hasSpeech) return;
-  const sel = document.getElementById("voiceSelect");
-  const voices = speechSynthesis.getVoices();
-  const enVoices = voices.filter(v => v.lang.startsWith('en'));
-  const idx = parseInt(sel.value);
-  if (enVoices[idx]) chosenVoice = enVoices[idx];
+function findBestVoice(gender) {
+  const voices = getAllEnglishVoices();
+  if (voices.length === 0) return null;
+  const names = gender === 'woman' ? FEMALE_NAMES : MALE_NAMES;
+  
+  // Pass 1: match known names, prefer GB/AU
+  for (const name of names) {
+    const v = voices.find(v => v.name.toLowerCase().includes(name) && (v.lang.includes('GB') || v.lang.includes('AU')));
+    if (v) return v;
+  }
+  // Pass 2: match known names, any English
+  for (const name of names) {
+    const v = voices.find(v => v.name.toLowerCase().includes(name));
+    if (v) return v;
+  }
+  // Pass 3: gender keyword in name
+  const kw = gender === 'woman' ? 'female' : 'male';
+  const g = voices.find(v => v.name.toLowerCase().includes(kw));
+  if (g) return g;
+  // Fallback: first en-GB, then first English
+  return voices.find(v => v.lang.includes('GB')) || voices[0] || null;
+}
+
+function refreshVoice() {
+  chosenVoice = findBestVoice(voiceGender);
+}
+
+if (hasSpeech && speechSynthesis.onvoiceschanged !== undefined) {
+  speechSynthesis.onvoiceschanged = refreshVoice;
+}
+refreshVoice();
+
+function setGender(g) {
+  voiceGender = g;
+  document.getElementById("optWoman").className = "voice-opt" + (g === 'woman' ? " active" : "");
+  document.getElementById("optMan").className = "voice-opt" + (g === 'man' ? " active" : "");
+  refreshVoice();
+}
+
+function setSpeed(s) {
+  voiceSpeed = s;
+  document.getElementById("optSlow").className = "voice-opt" + (s === 'slow' ? " active" : "");
+  document.getElementById("optNormal").className = "voice-opt" + (s === 'normal' ? " active" : "");
+  document.getElementById("optFast").className = "voice-opt" + (s === 'fast' ? " active" : "");
 }
 
 function testVoice() {
-  if (!hasSpeech || !chosenVoice) return;
+  if (!hasSpeech) return;
+  refreshVoice();
   try {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance("Checkmate. Get off my board, you absolute muppet.");
-    u.voice = chosenVoice;
-    u.lang = chosenVoice.lang;
-    u.rate = 0.92;
-    u.pitch = 1.0;
+    if (chosenVoice) { u.voice = chosenVoice; u.lang = chosenVoice.lang; } else { u.lang = "en-GB"; }
+    u.rate = SPEED_MAP[voiceSpeed];
+    u.pitch = voiceGender === 'woman' ? 1.05 : 0.85;
     speechSynthesis.speak(u);
   } catch(e) {}
 }
 
-if (hasSpeech && speechSynthesis.onvoiceschanged !== undefined) {
-  speechSynthesis.onvoiceschanged = populateVoices;
+function confirmVoice() {
+  document.getElementById("voicePanel").classList.remove("show");
+  try { speechSynthesis.cancel(); } catch(e) {}
 }
-populateVoices();
 
 function toggleVoice() {
-  if (!hasSpeech) { alert("Voice not supported in this browser. Try opening in Chrome."); return; }
+  if (!hasSpeech) { alert("Voice not supported here. Open in Chrome."); return; }
   voiceOn = !voiceOn;
   const btn = document.getElementById("voiceToggle");
   btn.textContent = voiceOn ? "VOICE: ON" : "VOICE: OFF";
   btn.className = "voice-btn " + (voiceOn ? "on" : "off");
-  document.getElementById("voiceRow").className = "voice-row" + (voiceOn ? " show" : "");
   if (voiceOn) {
+    // Show settings panel
     try {
-      const u = new SpeechSynthesisUtterance("");
-      u.volume = 0;
+      const u = new SpeechSynthesisUtterance(""); u.volume = 0;
       speechSynthesis.speak(u);
-      setTimeout(populateVoices, 100);
+      setTimeout(refreshVoice, 100);
     } catch(e) {}
+    document.getElementById("voicePanel").classList.add("show");
   } else {
+    document.getElementById("voicePanel").classList.remove("show");
     try { speechSynthesis.cancel(); } catch(e) {}
   }
 }
@@ -297,14 +352,10 @@ function speakSmack(text) {
   try {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    if (chosenVoice) {
-      u.voice = chosenVoice;
-      u.lang = chosenVoice.lang;
-    } else {
-      u.lang = "en-GB";
-    }
-    u.rate = 0.92;
-    u.pitch = 1.0;
+    if (!chosenVoice) refreshVoice();
+    if (chosenVoice) { u.voice = chosenVoice; u.lang = chosenVoice.lang; } else { u.lang = "en-GB"; }
+    u.rate = SPEED_MAP[voiceSpeed];
+    u.pitch = voiceGender === 'woman' ? 1.05 : 0.85;
     speechSynthesis.speak(u);
   } catch(e) {}
 }

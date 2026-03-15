@@ -49,7 +49,7 @@
   }
   .smack-text.visible { opacity: 1; transform: scale(1); }
   .smack-text.big {
-    font-size: 1.8rem; color: #ffd700;
+    font-size: 1.7rem; color: #ffd700;
     text-shadow: 0 0 20px rgba(255,215,0,0.8), 0 0 40px rgba(255,215,0,0.4),
                  2px 2px 0 rgba(0,0,0,0.9);
   }
@@ -127,7 +127,6 @@ const Pp="p",Nn="n",Bb="b",Rr="r",Qq="q",Kk="k",WW="w",BL="b";
 const PV={p:100,n:320,b:330,r:500,q:900,k:20000};
 const FILES=["a","b","c","d","e","f","g","h"];
 
-// SVG piece paths (standard chess piece outlines, viewBox 0 0 45 45)
 const SVG_PATHS = {
   k: `<g><path d="M22.5 11.63V6M20 8h5" stroke-linejoin="miter" style="fill:none;stroke:STROKE;stroke-width:1.5;stroke-linecap:butt"/>
       <path d="M22.5 25s4.5-7.5 3-10.5c0 0-1-2.5-3-2.5s-3 2.5-3 2.5c-1.5 3 3 10.5 3 10.5" style="fill:FILL;stroke:STROKE;stroke-width:1.5;stroke-linecap:butt;stroke-linejoin:miter"/>
@@ -163,18 +162,10 @@ function makeSVG(type, color, size) {
   const stroke = isW ? "#008899" : "#991155";
   const glow = isW ? "#00f0ff" : "#ff2d95";
   const dotFill = isW ? "#008899" : "#ff2d95";
-
-  let path = SVG_PATHS[type]
-    .replace(/FILL/g, fill)
-    .replace(/STROKE/g, stroke)
-    .replace(/DOTFILL/g, dotFill);
-
+  let path = SVG_PATHS[type].replace(/FILL/g, fill).replace(/STROKE/g, stroke).replace(/DOTFILL/g, dotFill);
   return `<svg class="piece-svg" style="--glow:${glow}" width="${size}" height="${size}" viewBox="0 0 45 45" xmlns="http://www.w3.org/2000/svg">${path}</svg>`;
 }
-
-function makeCapSVG(type, color) {
-  return makeSVG(type, color, 18);
-}
+function makeCapSVG(type, color) { return makeSVG(type, color, 18); }
 
 const AI_NAMES = [
   "BISHOP SLAYER", "QUEEN KILLER", "PAWN STORM", "DARK HORSE",
@@ -188,141 +179,203 @@ const AI_NAMES = [
 const SMACK = {
   opening: [
     "Let's see what you got, tough guy.",
-    "You sure about this? Last chance to quit.",
-    "I eat grandmasters for breakfast. You're a snack.",
-    "This board is my house. You're just visiting.",
-    "I hope you stretched. I'm about to bend you over this board.",
+    "You sure about this? Last chance to walk away.",
+    "I eat grandmasters for breakfast. You're a light snack.",
+    "This board is my house. You're trespassing.",
+    "I hope you stretched. I'm about to fold you.",
     "Sit down. Class is in session.",
-    "Another victim. Let's get this over with.",
-    "You brought a brain to a computer fight. Bold.",
+    "Another victim walks in. Let's speed this up.",
+    "You brought a brain to a computer fight. Brave and stupid.",
+    "I already feel bad for you. Almost.",
+    "Welcome to your worst chess experience ever.",
+  ],
+  // AI just made a normal move - talks trash EVERY time
+  aiMove: [
+    "That's called strategy. Look it up.",
+    "Every move I make is a nail in your coffin.",
+    "You watching? That's how it's done.",
+    "I'm setting traps you won't see for 5 moves.",
+    "You have no idea what's coming.",
+    "That move just ruined 3 of your plans at once.",
+    "I'm playing chess. You're playing checkers.",
+    "My pieces are in position. Yours are a mess.",
+    "You see a board. I see your funeral.",
+    "I'm building a cage around your king. Slowly.",
+    "Tick tock. The noose gets tighter every move.",
+    "You're walking right into it and you don't even know.",
+    "That's called a positional squeeze. Get used to it.",
+    "I can feel you panicking from here.",
+    "My worst move is still better than your best.",
+    "I planned this 8 moves ago. You're just catching up.",
+    "This is like watching a train wreck in slow motion.",
+    "Your position is rotting from the inside.",
+    "You're out of your depth and we both know it.",
+    "Every square I touch becomes mine. Deal with it.",
+    "I'm not even trying hard yet.",
+    "That move cost you the game. You just don't see it yet.",
+    "I'm carving you up piece by piece.",
+    "You call that a defense? I call it a speed bump.",
+    "I'd feel bad but honestly this is too fun.",
   ],
   aiCapture: [
-    "YOINK. That's mine now.",
-    "You just left that hanging? Seriously?",
-    "Bro that piece had a family.",
-    "I'm eating your pieces like it's a buffet.",
-    "You're donating material like a charity.",
-    "That piece was begging me to take it.",
-    "Thanks for the free piece, genius.",
-    "Keep feeding me. I'm still hungry.",
-    "You're playing chess. I'm playing cleanup.",
-    "That piece is in the graveyard now. Say goodbye.",
-    "Did you even want that piece?",
-    "I swear you're helping me win at this point.",
-    "Your army is getting real thin, pal.",
+    "YOINK. That's mine now, idiot.",
+    "You left that hanging? You serious right now?",
+    "That piece had a whole life ahead of it. Gone.",
+    "I'm eating your army like it's an all-you-can-eat buffet.",
+    "You're donating pieces like it's a charity event.",
+    "Thanks for the free piece. Real generous of you.",
+    "Keep feeding me. I'm STILL hungry.",
+    "You're playing chess, I'm playing Pac-Man with your pieces.",
+    "Say goodbye. That piece is DEAD.",
+    "Did you even want that? Because I sure did.",
+    "I swear you're throwing on purpose at this point.",
+    "Your army's looking real lonely out there.",
+    "Another one bites the dust. Keep 'em coming.",
+    "You just made my job easier. Again.",
+    "I'm collecting your pieces like trophies.",
+    "That's called a blunder. You should be embarrassed.",
   ],
   aiCaptureQueen: [
-    "YOUR QUEEN IS GONE. How's that feel?",
-    "I just snatched your queen. Game over, you just don't know it yet.",
-    "Queen down! You're playing with one hand now.",
-    "Goodbye your majesty. She's with me now.",
-    "That queen ain't coming back. Ever.",
-    "I took your best piece and I'm not even sorry.",
-    "Your queen just got bodied. Accept it.",
-    "Queen deleted. What else you got? Nothing.",
+    "YOUR QUEEN IS DEAD. How's that taste?",
+    "I snatched your queen. This game is OVER.",
+    "Queen down. You're playing with one arm now.",
+    "Your queen just got deleted from existence.",
+    "That queen ain't coming back. EVER.",
+    "I took your best piece and I'd do it again.",
+    "Your queen got bodied. Just accept it and suffer.",
+    "Queen gone. You're finished, you just don't know it.",
+    "I just ripped the heart out of your position.",
+    "Your queen? MY queen now. Oh wait, she's dead.",
   ],
   aiCaptureRook: [
-    "Rook gone. Your endgame just died.",
-    "I'll take that rook off your hands. You weren't using it right anyway.",
-    "One less rook. Your position is falling apart.",
+    "Rook gone. Your endgame is a corpse now.",
+    "I'll take that rook. You clearly didn't know what to do with it.",
+    "One less rook. Your position is bleeding out.",
+    "Your rook just got sent to the shadow realm.",
   ],
   playerCapture: [
-    "Lucky. Won't happen again.",
-    "Okay you got one. Enjoy it while it lasts.",
-    "That was bait. You fell right into my trap.",
-    "Cute. Real cute. Watch what happens next.",
-    "I let you have that. Don't get cocky.",
-    "That's the last freebie. I promise.",
-    "Fine. Take it. I don't need it to beat you.",
-    "One piece don't make a comeback, homie.",
-    "Congrats. You took a piece. Still losing though.",
-    "Oh wow you can capture. Want a medal?",
+    "Lucky shot. Won't happen again.",
+    "Okay you got one. Want a participation trophy?",
+    "That was bait and you fell for it. Sucker.",
+    "Cute. Real cute. Now watch what happens next.",
+    "I let you have that. Don't get it twisted.",
+    "That's your last freebie. I promise you that.",
+    "Take it. I don't need it to destroy you.",
+    "One piece don't make a comeback, genius.",
+    "Congrats on the capture. You're still getting crushed.",
+    "Oh wow you can take a piece. Groundbreaking.",
+    "Even a broken clock is right twice. That was your first time.",
+    "You think that changes anything? It doesn't.",
+    "Keep celebrating small wins. You'll need the memories.",
   ],
   playerCaptureQueen: [
-    "...alright. Respect. But I'm still coming for you.",
-    "You got my queen. I'm pissed now. Watch your back.",
-    "Okay that hurt. Not gonna lie. But I ain't done.",
-    "My queen's gone but I've got plenty of murder left in me.",
+    "...aight. You got my queen. Now I'm pissed.",
+    "My queen's gone but I've got murder in my heart.",
+    "Okay that stung. I'm coming for EVERYTHING you love now.",
+    "You took my queen? Fine. I'll beat you without her.",
+    "Enjoy that. It's the last good thing that happens to you.",
   ],
   aiCheck: [
-    "CHECK. Your king is shaking right now.",
-    "CHECK. Run, little king. Run.",
-    "Check. You feel that noose tightening?",
+    "CHECK. Your king is shaking.",
+    "CHECK. Run little king, run.",
+    "Check. Feel that noose tightening?",
     "CHECK. Nowhere safe for your boy.",
-    "Your king's sweating. I can see it from here.",
-    "Check. That crown's about to be mine.",
-    "CHECK. Tick tock, your king's running out of room.",
-    "I'm knocking on your king's door. Check.",
-    "Check. Panic mode activated.",
+    "Your king's sweating bullets right now.",
+    "Check. That crown is about to be MINE.",
+    "CHECK. Tick tock, running out of squares.",
+    "I'm at your king's front door. CHECK.",
+    "Check. Panic mode: ACTIVATED.",
+    "CHECK. Your king's about to have a real bad day.",
+    "That's check. Start praying.",
+    "CHECK. I smell checkmate coming.",
   ],
   playerCheck: [
-    "Check? That's cute. My king eats checks for breakfast.",
-    "Oh a check. I'm terrified. Not.",
-    "Nice check. Too bad it doesn't do anything.",
-    "Check? That's all you got? Pathetic.",
-    "My king ain't scared of you.",
-    "Cute check. Watch me slide right out of it.",
+    "Check? That's adorable. My king eats checks for breakfast.",
+    "A check. I'm SO scared. Not.",
+    "Nice check. Too bad it's completely useless.",
+    "Check? That's ALL you got? Pathetic.",
+    "My king ain't scared of you. Try harder.",
+    "Cute check. Watch me slip right out like nothing.",
+    "You wasted a move on that weak check?",
   ],
   aiWinning: [
-    "This is already over. You just haven't realized it.",
-    "I can see the finish line and you're nowhere near it.",
-    "Your position is a dumpster fire right now.",
-    "You might as well tip the king over.",
-    "I'm up material and I'm not slowing down.",
-    "Bro just resign. Save yourself the embarrassment.",
-    "I'm running through your position like it's nothing.",
-    "This is a masterclass. Take notes.",
-    "You're drowning and I'm not throwing a lifeline.",
+    "This is already over. You just haven't admitted it.",
+    "I can see the finish line. You can see your defeat.",
+    "Your position is a dumpster fire.",
+    "Just tip the king. Save us both some time.",
+    "I'm up material. You're up nothing.",
+    "Resign. Save yourself the embarrassment.",
+    "I'm running through your position like it's paper.",
+    "This is a masterclass. Take notes for next time.",
+    "You're drowning and I'm holding you under.",
     "The disrespect I'm showing your position right now...",
+    "This isn't even competitive anymore.",
+    "I'm not playing with my food. I'm savoring it.",
+    "Your position is so bad even you have to see it.",
+    "I've seen better play from a random number generator.",
   ],
   aiLosing: [
-    "Okay you're cooking. I'll give you that.",
+    "Okay you're cooking. Respect. For now.",
     "Don't get comfortable. I've come back from worse.",
-    "You think you're winning? That's exactly where I want you.",
-    "Alright... you got skills. But this ain't over.",
-    "I'm just lulling you into a false sense of security. Maybe.",
-    "Lucky streak. Enjoy it before I flip this board.",
-    "Not bad. But I've got tricks you haven't seen yet.",
+    "You think you're winning? That's where I want you.",
+    "Alright you got skills. This ain't over though.",
+    "I'm lulling you into a false sense of security.",
+    "Lucky streak. Enjoy it before I flip this whole thing.",
+    "Not bad. But I've got tricks you haven't seen.",
+    "You're ahead. For now. Emphasis on FOR NOW.",
+    "I'm just letting you feel good before I crush you.",
   ],
   stalemate: [
-    "Stalemate. You couldn't finish me. Weak.",
-    "A draw? I'll take that over losing to you.",
-    "Neither of us wins. How unsatisfying.",
-    "Stalemate. Rematch. Right now. No excuses.",
+    "Stalemate. You couldn't finish me. WEAK.",
+    "A draw? I'll take it over losing to your sorry game.",
+    "Neither of us wins. How pathetically boring.",
+    "Stalemate. Rematch. NOW.",
+    "You had me cornered and still couldn't close. Embarrassing.",
   ],
   aiWin: [
-    "CHECKMATE. Sit down.",
-    "GAME OVER. Don't feel bad. Actually, do.",
-    "Checkmate. You never had a chance.",
-    "That's MATE. I own this board.",
-    "Checkmate. Go practice and come back when you're ready.",
-    "DESTROYED. Thanks for playing.",
-    "Checkmate. Your king just got evicted.",
-    "GG. And by GG I mean Get Good.",
-    "Checkmate. I'd say it was close but I'd be lying.",
-    "Crown taken. Throne seized. You're done.",
+    "CHECKMATE. Sit your ass down.",
+    "GAME OVER. Don't feel bad. Actually, do feel bad.",
+    "Checkmate. You NEVER had a chance.",
+    "That's MATE. I OWN this board.",
+    "Checkmate. Go practice for 10 years and try again.",
+    "DESTROYED. Thanks for wasting my time.",
+    "Checkmate. Your king just got evicted from existence.",
+    "GG. And by GG I mean Get Good, scrub.",
+    "Checkmate. I'd say it was close but we'd both know I'm lying.",
+    "Crown taken. Throne seized. You're DONE.",
+    "CHECKMATE. Tell your friends I said you're trash.",
+    "Game. Set. Match. Funeral. Yours.",
+    "That wasn't a game. That was an execution.",
   ],
   playerWin: [
-    "...what just happened. Nah, run that back.",
-    "You got me. I'm not even gonna front. Well played.",
-    "Checkmate?! I need to recalibrate everything.",
-    "Okay you win THIS one. Emphasis on this ONE.",
-    "I underestimated you. That's on me. Won't happen twice.",
-    "GG. Now let me get my revenge.",
-    "Respect. But I want a rematch immediately.",
+    "...what. Run that back right now.",
+    "You got me. I ain't gonna front. Respect.",
+    "Checkmate?! I need to recalibrate EVERYTHING.",
+    "You win THIS one. Don't let it go to your head.",
+    "I underestimated you. My mistake. Won't happen twice.",
+    "GG. Now give me my rematch before I lose my mind.",
+    "Fine. You win. Enjoy it. It's the last time.",
+    "Okay I got cooked. I admit it. Now run it back.",
   ],
   idle: [
-    "You still there? Or did you rage quit mentally?",
-    "Move already. I'm getting bored.",
-    "I've calculated 47 ways to beat you while you're staring at the board.",
-    "Take your time. I'll just be here... winning.",
-    "Any day now, champ.",
-    "You're overthinking it. Trust me, no move saves you.",
-    "Hello? Did your brain crash?",
-    "I've seen glaciers move faster than you.",
-    "Stalling won't change the outcome.",
-    "While you're thinking, I already know your next 3 moves.",
-    "You gonna play or just sit there looking confused?",
+    "You still there? Or did your brain blue-screen?",
+    "MOVE. I'm dying of boredom over here.",
+    "I've calculated 47 ways to end you while you stare at the board.",
+    "Take your time. I'll be here... dominating.",
+    "Any day now, genius.",
+    "You're overthinking it. No move saves you anyway.",
+    "Hello?? Did your brain crash? Reboot and play.",
+    "Glaciers move faster than you.",
+    "Stalling won't change the outcome. You're cooked.",
+    "I already know your next 3 moves. All of them are bad.",
+    "You gonna play or just sit there with that confused look?",
+    "I've played faster games against rocks.",
+    "Bro did you fall asleep? WAKE UP.",
+    "The longer you wait the worse it gets. Trust me.",
+    "Are you trying to bore me into a draw? It won't work.",
+    "I swear my last opponent was a goldfish and moved faster.",
+    "If you're googling chess moves right now, I'm still better.",
+    "My grandma plays faster than this. And she's an AI too.",
   ],
 };
 
@@ -350,7 +403,7 @@ function init() {
 function startIdleTimer() {
   clearTimeout(idleTimer);
   if (gameOver || thinking || turn !== WW) return;
-  idleTimer = setTimeout(() => { if (!gameOver && !thinking && turn === WW) showSmack(pick(SMACK.idle), false); }, 15000);
+  idleTimer = setTimeout(() => { if (!gameOver && !thinking && turn === WW) showSmack(pick(SMACK.idle), false); startIdleTimer(); }, 10000);
 }
 
 function showSmack(text, isBig) {
@@ -361,7 +414,7 @@ function showSmack(text, isBig) {
     el.textContent = text;
     if (isBig) el.classList.add("big");
     el.classList.add("visible");
-    smackTimer = setTimeout(() => { el.classList.remove("visible"); }, isBig ? 4000 : 3500);
+    smackTimer = setTimeout(() => { el.classList.remove("visible"); }, isBig ? 4500 : 3500);
   }, 100);
 }
 
@@ -495,6 +548,7 @@ function execMove(move) {
   const kp = findKing(board, nextColor);
   const inCheck = kp && isAtt(board, kp[0], kp[1], turn);
 
+  // ENDGAME
   if (nextMvs.length === 0) {
     if (inCheck) {
       if (turn === WW) { showSmack(pick(SMACK.playerWin), true); setStatus("Checkmate. You win!"); }
@@ -503,19 +557,32 @@ function execMove(move) {
     gameOver = true; turn = nextColor; render(); return;
   }
 
+  // SMACK ON EVERY AI MOVE
   if (turn === BL) {
+    // AI just moved - ALWAYS talks
     if (cap) {
       if (capType === Qq) showSmack(pick(SMACK.aiCaptureQueen), true);
-      else if (capType === Rr) showSmack(pick(SMACK.aiCaptureRook), false);
+      else if (capType === Rr) showSmack(pick(SMACK.aiCaptureRook), true);
       else showSmack(pick(SMACK.aiCapture), false);
-    } else if (inCheck) { showSmack(pick(SMACK.aiCheck), true); }
-    else { const ms = materialScore(board); if (ms.b > ms.w + 250 && Math.random() > 0.3) showSmack(pick(SMACK.aiWinning), false); }
+    } else if (inCheck) {
+      showSmack(pick(SMACK.aiCheck), true);
+    } else {
+      // Check material advantage
+      const ms = materialScore(board);
+      if (ms.b > ms.w + 200) showSmack(pick(SMACK.aiWinning), false);
+      else showSmack(pick(SMACK.aiMove), false); // ALWAYS TALK
+    }
   } else {
+    // Player just moved - AI reacts
     if (cap) {
-      if (capType === Qq) showSmack(pick(SMACK.playerCaptureQueen), false);
+      if (capType === Qq) showSmack(pick(SMACK.playerCaptureQueen), true);
       else showSmack(pick(SMACK.playerCapture), false);
-    } else if (inCheck) { showSmack(pick(SMACK.playerCheck), false); }
-    else { const ms = materialScore(board); if (ms.w > ms.b + 250 && Math.random() > 0.3) showSmack(pick(SMACK.aiLosing), false); }
+    } else if (inCheck) {
+      showSmack(pick(SMACK.playerCheck), false);
+    } else {
+      const ms = materialScore(board);
+      if (ms.w > ms.b + 200) showSmack(pick(SMACK.aiLosing), false);
+    }
   }
 
   if (inCheck) setStatus(nextColor === WW ? "Check! Your move." : "Check. " + aiName + " thinking...");

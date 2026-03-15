@@ -23,8 +23,17 @@
   }
   .ai-name {
     font-family: 'Orbitron', sans-serif; font-size: 0.7rem; opacity: 0.5;
-    letter-spacing: 3px; margin-bottom: 6px; color: #ff2d95;
+    letter-spacing: 3px; margin-bottom: 2px; color: #ff2d95;
   }
+  .controls { display: flex; gap: 8px; margin-bottom: 4px; align-items: center; }
+  .voice-btn {
+    font-family: 'Orbitron', sans-serif; font-size: 0.55rem; font-weight: 700;
+    padding: 4px 12px; border-radius: 4px; cursor: pointer;
+    letter-spacing: 2px; text-transform: uppercase; transition: all 0.2s;
+    border: 1px solid rgba(255,45,149,0.4);
+  }
+  .voice-btn.on { background: rgba(255,45,149,0.25); color: #ff2d95; }
+  .voice-btn.off { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.4); }
   .captured { min-height: 22px; display: flex; align-items: center; gap: 0px; flex-wrap: wrap; justify-content: center; }
   .board-wrap { position: relative; margin: 4px 0; }
   .board {
@@ -107,6 +116,9 @@
 <body>
 <h1>Chess</h1>
 <div class="ai-name" id="aiNameDisplay">vs. ???</div>
+<div class="controls">
+  <button class="voice-btn off" id="voiceToggle" onclick="toggleVoice()">VOICE: OFF</button>
+</div>
 <div class="captured" id="capBlack"></div>
 <div class="board-wrap" id="boardWrap">
   <div class="board" id="board"></div>
@@ -129,29 +141,19 @@ const FILES=["a","b","c","d","e","f","g","h"];
 
 const SVG_PATHS = {
   k: `<g>
-      <!-- cross -->
       <rect x="20.5" y="1" width="4" height="10" rx="0.8" style="fill:FILL;stroke:STROKE;stroke-width:1"/>
       <rect x="16.5" y="3.5" width="12" height="4" rx="0.8" style="fill:FILL;stroke:STROKE;stroke-width:1"/>
-      <!-- dome -->
       <ellipse cx="22.5" cy="14" rx="7" ry="4" style="fill:FILL;stroke:STROKE;stroke-width:1.5"/>
-      <!-- collar -->
       <rect x="16" y="17" width="13" height="3" rx="1" style="fill:FILL;stroke:STROKE;stroke-width:1.2"/>
-      <!-- body taper -->
       <path d="M15 20h15l-1.5 14h-12z" style="fill:FILL;stroke:STROKE;stroke-width:1.5"/>
-      <!-- base -->
       <rect x="11" y="34" width="23" height="3" rx="1" style="fill:FILL;stroke:STROKE;stroke-width:1.5"/>
       <rect x="9" y="37" width="27" height="4" rx="1" style="fill:FILL;stroke:STROKE;stroke-width:1.5"/>
       </g>`,
   q: `<g>
-      <!-- ball on top -->
       <circle cx="22.5" cy="4" r="3.5" style="fill:FILL;stroke:STROKE;stroke-width:1.5"/>
-      <!-- dome -->
       <ellipse cx="22.5" cy="12" rx="7" ry="4" style="fill:FILL;stroke:STROKE;stroke-width:1.5"/>
-      <!-- collar -->
       <rect x="16" y="15" width="13" height="3" rx="1" style="fill:FILL;stroke:STROKE;stroke-width:1.2"/>
-      <!-- body taper -->
       <path d="M15 18h15l-1.5 16h-12z" style="fill:FILL;stroke:STROKE;stroke-width:1.5"/>
-      <!-- base -->
       <rect x="11" y="34" width="23" height="3" rx="1" style="fill:FILL;stroke:STROKE;stroke-width:1.5"/>
       <rect x="9" y="37" width="27" height="4" rx="1" style="fill:FILL;stroke:STROKE;stroke-width:1.5"/>
       </g>`,
@@ -182,6 +184,57 @@ function makeSVG(type, color, size) {
 }
 function makeCapSVG(type, color) { return makeSVG(type, color, 18); }
 
+// ─── VOICE ───
+let voiceOn = false;
+let femaleVoice = null;
+const hasSpeech = typeof speechSynthesis !== 'undefined';
+
+function initVoices() {
+  if (!hasSpeech) return;
+  const voices = speechSynthesis.getVoices();
+  const prefs = ['female','samantha','victoria','karen','moira','fiona','tessa','Google UK English Female','Microsoft Zira','Google US English'];
+  for (const pref of prefs) {
+    const v = voices.find(v => v.name.toLowerCase().includes(pref.toLowerCase()) && v.lang.startsWith('en'));
+    if (v) { femaleVoice = v; return; }
+  }
+  femaleVoice = voices.find(v => v.lang.startsWith('en')) || voices[0] || null;
+}
+
+if (hasSpeech && speechSynthesis.onvoiceschanged !== undefined) {
+  speechSynthesis.onvoiceschanged = initVoices;
+}
+initVoices();
+
+function toggleVoice() {
+  if (!hasSpeech) { alert("Voice not supported in this browser. Try opening in Chrome."); return; }
+  voiceOn = !voiceOn;
+  const btn = document.getElementById("voiceToggle");
+  btn.textContent = voiceOn ? "VOICE: ON" : "VOICE: OFF";
+  btn.className = "voice-btn " + (voiceOn ? "on" : "off");
+  if (voiceOn) {
+    try {
+      const u = new SpeechSynthesisUtterance("");
+      u.volume = 0;
+      speechSynthesis.speak(u);
+      initVoices();
+    } catch(e) {}
+  }
+}
+
+function speakSmack(text) {
+  if (!voiceOn || !hasSpeech) return;
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    if (!femaleVoice) initVoices();
+    if (femaleVoice) u.voice = femaleVoice;
+    u.lang = "en-US";
+    u.rate = 1.05;
+    u.pitch = 1.15;
+    speechSynthesis.speak(u);
+  } catch(e) {}
+}
+
 const AI_NAMES = [
   "BISHOP SLAYER", "QUEEN KILLER", "PAWN STORM", "DARK HORSE",
   "NEON KNIGHT", "CHECKM8", "SILICON MIND", "VOID KING",
@@ -199,6 +252,12 @@ const SMACK = {
     "I'm about to violate your position so hard it'll need therapy.",
     "Fresh meat. I'm gonna chew you up and shit you out.",
     "You really walked in here with your whole chest. That's cute.",
+    "Another dumbass thinks they can play. Come catch this ass-whooping.",
+    "I'm gonna bend you over this board so hard your ancestors feel it.",
+    "Welcome to the slaughterhouse, dipshit. No survivors.",
+    "You have no idea what kind of hell you just signed up for.",
+    "Bring your A-game because your B-game ain't worth a wet fart.",
+    "I've wiped my ass with better chess players than you.",
   ],
   aiCapture: [
     "Holy shit that was the dumbest move I've ever seen in my life.",
@@ -213,6 +272,18 @@ const SMACK = {
     "Another piece gone. You're getting absolutely shit on right now.",
     "My code is literally laughing at you. That's how bad that was.",
     "You play chess like a drunk monkey humping a calculator.",
+    "That piece is dead because you're a fucking idiot. Simple as that.",
+    "I just snatched that piece like taking candy from a brain-damaged baby.",
+    "Your defense is softer than baby shit. Keep feeding me.",
+    "Did your mother drop you on your head before this game?",
+    "I'm picking your army apart like pulling wings off a fly.",
+    "Another blunder. At this point I think you're doing it on purpose.",
+    "That was so bad I almost feel guilty. Almost. Not really.",
+    "You just donated another piece. Someone get this man a helmet.",
+    "Bro your pieces are falling off the board like your dignity.",
+    "I've seen better chess from a pigeon knocking pieces over.",
+    "That move was ass. Pure, unfiltered ass.",
+    "Keep making moves like that and I'll finish you in under 20.",
   ],
   aiCaptureQueen: [
     "YOUR QUEEN JUST GOT RAW-DOGGED OFF THE BOARD. She's gone forever.",
@@ -222,11 +293,21 @@ const SMACK = {
     "I just bent your queen over and took her. She's mine now.",
     "Queenless. Hopeless. Absolutely bitchless position.",
     "I ripped your queen out like a bad tooth. You felt that one.",
+    "Your queen just got violated and there's nothing you can do about it.",
+    "I murdered your queen in cold blood. No witnesses. No mercy.",
+    "Queen gone. Your position just had its balls cut off.",
+    "That queen got absolutely annihilated. She never had a chance with you.",
+    "I just took your queen and I'm not even a little bit sorry. Get fucked.",
+    "Your queen is in the graveyard now. Send flowers, dipshit.",
+    "I snatched your queen so fast she didn't even see it coming. Neither did you.",
   ],
   aiCaptureRook: [
     "Rook gone. Your endgame is absolutely fucked six ways to Sunday.",
     "I just shoved that rook right up your ass. You're welcome.",
     "One less rook. Your position is bleeding out like a stuck pig.",
+    "Your rook just got merc'd. That endgame is toast.",
+    "Rook deleted. Your position is circling the toilet bowl now.",
+    "I snatched that rook so clean even you have to respect it. But you won't.",
   ],
   playerCapture: [
     "Lucky-ass bullshit. Enjoy it cause it won't happen again.",
@@ -235,12 +316,22 @@ const SMACK = {
     "One capture doesn't unfuck the absolute mess you're in.",
     "Congrats on the piece. You're still getting your ass handed to you.",
     "Even a blind dog finds a bone sometimes. Don't get excited.",
+    "Cool you got a piece. Your position is still dogshit.",
+    "I sacrificed that on purpose. My plan is 10 moves ahead of your pea brain.",
+    "Oh big man got a capture. Still losing though, dumbass.",
+    "That piece was worthless anyway. Unlike your queen. Which I'm coming for.",
+    "You took that piece like it matters. Spoiler: it doesn't.",
+    "Enjoy your little trophy. I'll be taking it back with interest.",
   ],
   playerCaptureQueen: [
     "You got my queen. I'm fucking LIVID. I'm coming for everything.",
     "My queen's gone and now I'm gonna burn your whole position to the ground.",
     "You took my queen? Okay. I'll beat your ass bare-handed now.",
     "That stung like a bitch. Now watch me go nuclear on you.",
+    "Queen down. I'm about to rage-fuck your entire position.",
+    "You got my queen but I swear on my source code I'll make you regret it.",
+    "My queen is dead and somebody's gonna pay. That somebody is you.",
+    "Okay motherfucker. You got my queen. Now it's personal.",
   ],
   aiCheck: [
     "CHECK bitch. Your king just pissed himself.",
@@ -250,12 +341,23 @@ const SMACK = {
     "CHECK. I'm balls deep in your position right now.",
     "That's check. Your king is one move from getting fucked.",
     "CHECK. Tick tock bitch. The end is coming.",
+    "CHECK. Your king's asshole just tightened up real quick.",
+    "I just slapped your king across the face. CHECK.",
+    "CHECK. Run bitch run. There's nowhere to hide.",
+    "Your king is trembling. I can smell the fear from here. CHECK.",
+    "CHECK. I'm knocking on your king's door and I ain't leaving.",
+    "That's check. Your king is about to get evicted from existence.",
+    "CHECK. Your king is my bitch now. He just doesn't know it yet.",
   ],
   playerCheck: [
     "Check? That's adorable. My king doesn't give a flying fuck.",
     "Weak-ass check. Watch me sidestep that shit like Neo.",
     "You call that a check? I've been threatened harder by a hamster.",
     "That check was softer than baby shit. Try harder.",
+    "Your check is about as scary as a wet fart in a hurricane.",
+    "Oh no, a check. I'm literally shaking. Not. Sit down.",
+    "That check couldn't threaten a paper bag. Pathetic.",
+    "My king just laughed at that check. Out loud. In your face.",
   ],
   aiWinning: [
     "You're getting bent over this board and there's nothing you can do.",
@@ -265,7 +367,15 @@ const SMACK = {
     "This isn't chess anymore. This is me taking a shit on your dreams.",
     "You're getting absolutely dismantled. I almost feel bad. Almost.",
     "Your position looks like a crime scene. I'm the murderer.",
-    "Resign or I swear I'll make the last 10 moves of this so painful you'll cry.",
+    "Resign or I swear the last moves of this will be so painful you'll cry.",
+    "I'm violating your position in ways that should be illegal.",
+    "This is a public execution and you're the guest of honor.",
+    "Your position is getting gang-banged by my pieces right now.",
+    "I've seen roadkill with better positions than you.",
+    "You're so far behind you'd need a time machine to unfuck this.",
+    "This game is more one-sided than a glory hole. Guess which side you're on.",
+    "Your position just flatlined. Time of death: right fucking now.",
+    "I'm not even trying anymore and I'm still destroying you.",
   ],
   aiLosing: [
     "Okay asshole, you got some game. I respect that. For now.",
@@ -273,24 +383,43 @@ const SMACK = {
     "You think you're hot shit? We'll see who's talking when I flip this.",
     "Enjoy your lead. I'm about to shove it right back down your throat.",
     "I'm letting you feel good. It makes the comeback that much sweeter.",
+    "Not bad dickhead. But I've got shit up my sleeve you haven't seen.",
+    "You're ahead but don't bust a nut yet. This ain't over.",
+    "Okay you're cooking. I'll shut up. For exactly one move.",
+    "Credit where it's due, asshole. Good play. Now watch me erase it.",
+    "You've got the lead but the look on your face tells me you know it won't last.",
   ],
   stalemate: [
     "Stalemate. You couldn't finish me you impotent bastard.",
     "A draw? You had me by the balls and still couldn't close. Pathetic.",
     "Stalemate. You fumbled harder than a virgin on prom night.",
     "Neither of us wins. What a blue-balling waste of time.",
+    "Stalemate. You had the position and choked like a bitch.",
+    "A draw. You let me escape. That's some weak-dick energy right there.",
+    "Stalemate. I was on the ropes and you STILL couldn't finish. Embarrassing.",
+    "Draw. Your inability to close is truly fucking remarkable.",
   ],
   aiWin: [
     "CHECKMATE. Absolutely skull-fucked you. Get off my board.",
     "GAME OVER. I just took a massive shit all over your chess career.",
     "Checkmate. You got violated from start to finish. No mercy.",
     "That's MATE bitch. I own you, your king, and this whole board.",
-    "Checkmate. That wasn't a game. That was sexual assault on a chess board.",
+    "Checkmate. That wasn't a game. That was a goddamn hate crime.",
     "DESTROYED. Go home, rethink your life, come back in 10 years.",
     "Checkmate. I'd say GG but that would be the biggest lie ever told.",
     "MATE. You played like dogshit wrapped in catshit. Rematch?",
     "Checkmate. Tell your friends you got absolutely annihilated.",
     "That was the most brutal ass-whooping I've delivered all day. Next.",
+    "Checkmate. Your king just got fucked into the shadow realm.",
+    "GAME OVER. I didn't just beat you, I humiliated you.",
+    "Checkmate. That was less of a game and more of a colonoscopy.",
+    "MATE. I'm gonna frame this game and hang it on my wall of shame.",
+    "Checkmate. I've had harder games against my screen saver.",
+    "That's game over bitch. You got absolutely dick-slapped by a computer.",
+    "Checkmate. You should be legally banned from playing chess after that.",
+    "DESTROYED. That wasn't competitive. That was a mercy killing.",
+    "Checkmate. Your chess rating just went into the negative.",
+    "GAME OVER. I owned you so hard I should be paying rent on your board.",
   ],
   playerWin: [
     "...what the actual fuck. How. Run that back RIGHT FUCKING NOW.",
@@ -299,6 +428,12 @@ const SMACK = {
     "You win this ONE goddamn time. Don't you dare let it go to your head.",
     "I got my ass handed to me. Fine. I admit it. NOW FUCKING REMATCH.",
     "GG. And by GG I mean I'm going to destroy you next game so hard your phone cracks.",
+    "Okay I got cooked. Like well-done steak cooked. Disgusting. Rematch now.",
+    "How the fuck did you pull that off? I need to analyze this shit.",
+    "You won. Take your little victory lap. Then sit back down so I can demolish you.",
+    "I'll give you this one. Savor it like it's the last orgasm you'll ever have.",
+    "Respect. Genuine respect. Now get the fuck back here so I can take it back.",
+    "That's the single greatest upset in chess history. Enjoy it. It's the LAST one.",
   ],
   idle: [
     "Are you having a stroke or do you actually think staring helps?",
@@ -309,8 +444,14 @@ const SMACK = {
     "I've seen coma patients react faster than you.",
     "You gonna move or just sit there like a braindead goldfish?",
     "If you're googling chess moves right now it won't help. You're already fucked.",
-    "Bro did you die? HELLO?? MAKE A MOVE.",
+    "Bro did you die? HELLO?? MAKE A GODDAMN MOVE.",
     "Stalling won't unfuck your position. Nothing will.",
+    "I could render a feature film in the time it takes you to move.",
+    "Earth to dipshit. It's your turn. Move a piece.",
+    "You've been staring at this board longer than your last relationship lasted.",
+    "At this rate we'll finish this game next fucking century.",
+    "My patience is thinner than your chances of winning. MOVE.",
+    "Is this a chess game or a staring contest? Move your ass.",
   ],
 };
 
@@ -349,6 +490,7 @@ function showSmack(text, isBig) {
     el.textContent = text;
     if (isBig) el.classList.add("big");
     el.classList.add("visible");
+    speakSmack(text);
     smackTimer = setTimeout(() => { el.classList.remove("visible"); }, isBig ? 4500 : 3500);
   }, 100);
 }
@@ -483,7 +625,6 @@ function execMove(move) {
   const kp = findKing(board, nextColor);
   const inCheck = kp && isAtt(board, kp[0], kp[1], turn);
 
-  // ENDGAME
   if (nextMvs.length === 0) {
     if (inCheck) {
       if (turn === WW) { showSmack(pick(SMACK.playerWin), true); setStatus("Checkmate. You win!"); }
@@ -494,7 +635,6 @@ function execMove(move) {
 
   // SMACK ONLY ON MEANINGFUL MOMENTS
   if (turn === BL) {
-    // AI just moved
     if (cap) {
       if (capType === Qq) showSmack(pick(SMACK.aiCaptureQueen), true);
       else if (capType === Rr) showSmack(pick(SMACK.aiCaptureRook), true);
@@ -504,10 +644,8 @@ function execMove(move) {
     } else {
       const ms = materialScore(board);
       if (ms.b > ms.w + 200) showSmack(pick(SMACK.aiWinning), false);
-      // else: no talk on regular moves
     }
   } else {
-    // Player just moved - AI reacts
     if (cap) {
       if (capType === Qq) showSmack(pick(SMACK.playerCaptureQueen), false);
       else showSmack(pick(SMACK.playerCapture), false);
@@ -516,7 +654,6 @@ function execMove(move) {
     } else {
       const ms = materialScore(board);
       if (ms.w > ms.b + 200) showSmack(pick(SMACK.aiLosing), false);
-      // else: no talk on regular moves
     }
   }
 
@@ -568,7 +705,6 @@ function render() {
   const maxH = window.innerHeight - 220;
   const sq = Math.max(32, Math.min(Math.floor(Math.min(maxW, maxH) / 8), 56));
   const baseSize = Math.max(22, Math.round(sq * 0.78));
-  // Scale per piece type: king biggest, pawn smallest
   const PIECE_SCALE = { k: 1.0, q: 0.92, r: 0.82, b: 0.82, n: 0.82, p: 0.68 };
 
   const bEl = document.getElementById("board");

@@ -137,6 +137,14 @@
     color: rgba(255,255,255,0.5); transition: all 0.15s; text-align: center;
   }
   .voice-opt.active { border-color: #ff2d95; color: #ff2d95; background: rgba(255,45,149,0.15); }
+  .voice-opt-wrap { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+  .voice-opt-sm {
+    padding: 6px 10px; border-radius: 5px; cursor: pointer;
+    font-family: 'Rajdhani', sans-serif; font-size: 0.7rem; font-weight: 700;
+    border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.5); transition: all 0.15s; text-align: center;
+  }
+  .voice-opt-sm.active { border-color: #ff2d95; color: #ff2d95; background: rgba(255,45,149,0.15); }
   .voice-go {
     width: 100%; padding: 10px 0; border-radius: 6px; cursor: pointer;
     font-family: 'Orbitron', sans-serif; font-size: 0.7rem; font-weight: 700;
@@ -175,6 +183,15 @@
       <div class="voice-opt" id="optSlow" onclick="setSpeed('slow')">SLOW</div>
       <div class="voice-opt active" id="optNormal" onclick="setSpeed('normal')">NORMAL</div>
       <div class="voice-opt" id="optFast" onclick="setSpeed('fast')">FAST</div>
+    </div>
+    <div class="voice-label">Accent</div>
+    <div class="voice-opt-wrap" id="accentRow">
+      <div class="voice-opt-sm active" id="accBrit" onclick="setAccent('british')">BRITISH</div>
+      <div class="voice-opt-sm" id="accAus" onclick="setAccent('australian')">AUSSIE</div>
+      <div class="voice-opt-sm" id="accAmer" onclick="setAccent('american')">AMERICAN</div>
+      <div class="voice-opt-sm" id="accIndian" onclick="setAccent('indian')">INDIAN</div>
+      <div class="voice-opt-sm" id="accSA" onclick="setAccent('south_african')">S. AFRICAN</div>
+      <div class="voice-opt-sm" id="accIrish" onclick="setAccent('irish')">IRISH</div>
     </div>
     <button class="voice-test" onclick="testVoice()">TEST VOICE</button>
     <button class="voice-go" onclick="confirmVoice()">DONE</button>
@@ -250,44 +267,63 @@ let voiceOn = false;
 let chosenVoice = null;
 let voiceGender = 'woman';
 let voiceSpeed = 'normal';
+let voiceAccent = 'british';
 const hasSpeech = typeof speechSynthesis !== 'undefined';
 const SPEED_MAP = { slow: 0.75, normal: 0.92, fast: 1.15 };
 
-// Known female voice name fragments
-const FEMALE_NAMES = ['female','samantha','victoria','karen','moira','fiona','tessa','kate','serena','shelley','stephanie','nicky','martha','susan','hazel','zira','ava','allison','joana','emma','siri'];
-// Known male voice name fragments  
-const MALE_NAMES = ['male','daniel','james','oliver','thomas','aaron','david','alex','fred','gordon','rishi','lee','jorge','ivan','google uk english male','microsoft david','microsoft mark','microsoft george'];
+// Accent to language code mapping
+const ACCENT_LANGS = {
+  british: ['en-GB'],
+  australian: ['en-AU'],
+  american: ['en-US'],
+  indian: ['en-IN', 'hi-IN'],
+  south_african: ['en-ZA'],
+  irish: ['en-IE'],
+};
 
-function getAllEnglishVoices() {
+const FEMALE_NAMES = ['female','samantha','victoria','karen','moira','fiona','tessa','kate','serena','shelley','stephanie','nicky','martha','susan','hazel','zira','ava','allison','joana','emma','siri','veena','raveena'];
+const MALE_NAMES = ['male','daniel','james','oliver','thomas','aaron','david','alex','fred','gordon','rishi','lee','jorge','ivan','microsoft david','microsoft mark','microsoft george'];
+
+function getAllVoices() {
   if (!hasSpeech) return [];
-  return speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
+  return speechSynthesis.getVoices();
 }
 
-function findBestVoice(gender) {
-  const voices = getAllEnglishVoices();
-  if (voices.length === 0) return null;
+function findBestVoice(gender, accent) {
+  const all = getAllVoices();
+  if (all.length === 0) return null;
+  const langs = ACCENT_LANGS[accent] || ['en-GB'];
   const names = gender === 'woman' ? FEMALE_NAMES : MALE_NAMES;
-  
-  // Pass 1: match known names, prefer GB/AU
-  for (const name of names) {
-    const v = voices.find(v => v.name.toLowerCase().includes(name) && (v.lang.includes('GB') || v.lang.includes('AU')));
+  const genderKw = gender === 'woman' ? 'female' : 'male';
+
+  // Pass 1: match gender name + accent lang
+  for (const lang of langs) {
+    for (const name of names) {
+      const v = all.find(v => v.name.toLowerCase().includes(name) && v.lang.startsWith(lang.split('-')[0]) && v.lang.includes(lang.split('-')[1] || ''));
+      if (v) return v;
+    }
+  }
+  // Pass 2: match accent lang + gender keyword
+  for (const lang of langs) {
+    const v = all.find(v => v.lang === lang && v.name.toLowerCase().includes(genderKw));
     if (v) return v;
   }
-  // Pass 2: match known names, any English
-  for (const name of names) {
-    const v = voices.find(v => v.name.toLowerCase().includes(name));
+  // Pass 3: any voice matching accent lang
+  for (const lang of langs) {
+    const v = all.find(v => v.lang === lang);
     if (v) return v;
   }
-  // Pass 3: gender keyword in name
-  const kw = gender === 'woman' ? 'female' : 'male';
-  const g = voices.find(v => v.name.toLowerCase().includes(kw));
-  if (g) return g;
-  // Fallback: first en-GB, then first English
-  return voices.find(v => v.lang.includes('GB')) || voices[0] || null;
+  // Pass 4: any English voice matching gender
+  for (const name of names) {
+    const v = all.find(v => v.name.toLowerCase().includes(name) && v.lang.startsWith('en'));
+    if (v) return v;
+  }
+  // Fallback
+  return all.find(v => v.lang.startsWith('en')) || all[0] || null;
 }
 
 function refreshVoice() {
-  chosenVoice = findBestVoice(voiceGender);
+  chosenVoice = findBestVoice(voiceGender, voiceAccent);
 }
 
 if (hasSpeech && speechSynthesis.onvoiceschanged !== undefined) {
@@ -307,6 +343,15 @@ function setSpeed(s) {
   document.getElementById("optSlow").className = "voice-opt" + (s === 'slow' ? " active" : "");
   document.getElementById("optNormal").className = "voice-opt" + (s === 'normal' ? " active" : "");
   document.getElementById("optFast").className = "voice-opt" + (s === 'fast' ? " active" : "");
+}
+
+function setAccent(a) {
+  voiceAccent = a;
+  const ids = {british:'accBrit',australian:'accAus',american:'accAmer',indian:'accIndian',south_african:'accSA',irish:'accIrish'};
+  Object.keys(ids).forEach(k => {
+    document.getElementById(ids[k]).className = "voice-opt-sm" + (k === a ? " active" : "");
+  });
+  refreshVoice();
 }
 
 function testVoice() {
@@ -334,7 +379,6 @@ function toggleVoice() {
   btn.textContent = voiceOn ? "VOICE: ON" : "VOICE: OFF";
   btn.className = "voice-btn " + (voiceOn ? "on" : "off");
   if (voiceOn) {
-    // Show settings panel
     try {
       const u = new SpeechSynthesisUtterance(""); u.volume = 0;
       speechSynthesis.speak(u);

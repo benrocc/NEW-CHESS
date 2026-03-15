@@ -111,6 +111,22 @@
   }
   .promo-btn:hover { background: rgba(0,240,255,0.2); }
   .piece-svg { filter: drop-shadow(0 0 4px var(--glow)); pointer-events: none; }
+  .voice-select {
+    font-family: 'Rajdhani', sans-serif; font-size: 0.65rem; font-weight: 600;
+    padding: 3px 6px; border-radius: 4px; cursor: pointer;
+    background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.6);
+    border: 1px solid rgba(255,255,255,0.15); max-width: 160px;
+    appearance: none; -webkit-appearance: none;
+  }
+  .voice-select option { background: #1a1125; color: #e0e0e0; }
+  .voice-row { display: none; gap: 6px; align-items: center; margin-bottom: 4px; }
+  .voice-row.show { display: flex; }
+  .test-btn {
+    font-family: 'Rajdhani', sans-serif; font-size: 0.55rem; font-weight: 700;
+    padding: 3px 8px; border-radius: 3px; cursor: pointer;
+    background: rgba(255,45,149,0.15); color: #ff2d95;
+    border: 1px solid rgba(255,45,149,0.3); letter-spacing: 1px;
+  }
 </style>
 </head>
 <body>
@@ -118,6 +134,10 @@
 <div class="ai-name" id="aiNameDisplay">vs. ???</div>
 <div class="controls">
   <button class="voice-btn off" id="voiceToggle" onclick="toggleVoice()">VOICE: OFF</button>
+</div>
+<div class="voice-row" id="voiceRow">
+  <select class="voice-select" id="voiceSelect" onchange="pickVoice()"></select>
+  <button class="test-btn" onclick="testVoice()">TEST</button>
 </div>
 <div class="captured" id="capBlack"></div>
 <div class="board-wrap" id="boardWrap">
@@ -186,40 +206,72 @@ function makeCapSVG(type, color) { return makeSVG(type, color, 18); }
 
 // ─── VOICE ───
 let voiceOn = false;
-let femaleVoice = null;
+let chosenVoice = null;
 const hasSpeech = typeof speechSynthesis !== 'undefined';
 
-function initVoices() {
+function populateVoices() {
   if (!hasSpeech) return;
   const voices = speechSynthesis.getVoices();
-  // Prioritize natural-sounding English female voices
-  const prefs = [
-    'Google UK English Female',
-    'Martha', 'Samantha', 'Karen', 'Moira', 'Fiona', 'Tessa', 'Victoria',
-    'Serena', 'Stephanie', 'Nicky', 'Shelley', 'Kate',
-    'Microsoft Hazel', 'Microsoft Susan', 'Microsoft Zira',
-    'Google US English',
-    'en-GB', 'en-AU',
-  ];
-  // First pass: exact name matches for known good female voices
+  const sel = document.getElementById("voiceSelect");
+  sel.innerHTML = "";
+  // Filter to English voices only
+  const enVoices = voices.filter(v => v.lang.startsWith('en'));
+  if (enVoices.length === 0) return;
+
+  // Sort: prefer GB/AU first, then by name
+  enVoices.sort((a, b) => {
+    const aGB = a.lang.includes('GB') || a.lang.includes('AU') ? 0 : 1;
+    const bGB = b.lang.includes('GB') || b.lang.includes('AU') ? 0 : 1;
+    if (aGB !== bGB) return aGB - bGB;
+    return a.name.localeCompare(b.name);
+  });
+
+  enVoices.forEach((v, i) => {
+    const opt = document.createElement("option");
+    opt.value = i;
+    opt.textContent = v.name.replace(/Microsoft |Google /g, '') + " (" + v.lang + ")";
+    opt.dataset.idx = voices.indexOf(v);
+    sel.appendChild(opt);
+  });
+
+  // Auto-pick best: look for natural/premium English female
+  const prefs = ['Google UK English Female','Martha','Samantha','Karen','Moira','Fiona','Kate','Serena','Shelley','Stephanie','Nicky','Microsoft Hazel','Microsoft Susan'];
   for (const pref of prefs) {
-    const v = voices.find(v => v.name.includes(pref) && v.lang.startsWith('en'));
-    if (v) { femaleVoice = v; return; }
+    const idx = enVoices.findIndex(v => v.name.includes(pref));
+    if (idx !== -1) { sel.value = idx; pickVoice(); return; }
   }
-  // Second pass: any voice with "female" in name
-  const f = voices.find(v => v.name.toLowerCase().includes('female') && v.lang.startsWith('en'));
-  if (f) { femaleVoice = f; return; }
-  // Third pass: prefer en-GB for that English woman sound
-  const gb = voices.find(v => v.lang === 'en-GB');
-  if (gb) { femaleVoice = gb; return; }
-  // Fallback: any English voice
-  femaleVoice = voices.find(v => v.lang.startsWith('en')) || voices[0] || null;
+  // Fallback: first en-GB
+  const gbIdx = enVoices.findIndex(v => v.lang.includes('GB'));
+  if (gbIdx !== -1) { sel.value = gbIdx; }
+  pickVoice();
+}
+
+function pickVoice() {
+  if (!hasSpeech) return;
+  const sel = document.getElementById("voiceSelect");
+  const voices = speechSynthesis.getVoices();
+  const enVoices = voices.filter(v => v.lang.startsWith('en'));
+  const idx = parseInt(sel.value);
+  if (enVoices[idx]) chosenVoice = enVoices[idx];
+}
+
+function testVoice() {
+  if (!hasSpeech || !chosenVoice) return;
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance("Checkmate. Get off my board, you absolute muppet.");
+    u.voice = chosenVoice;
+    u.lang = chosenVoice.lang;
+    u.rate = 0.92;
+    u.pitch = 1.0;
+    speechSynthesis.speak(u);
+  } catch(e) {}
 }
 
 if (hasSpeech && speechSynthesis.onvoiceschanged !== undefined) {
-  speechSynthesis.onvoiceschanged = initVoices;
+  speechSynthesis.onvoiceschanged = populateVoices;
 }
-initVoices();
+populateVoices();
 
 function toggleVoice() {
   if (!hasSpeech) { alert("Voice not supported in this browser. Try opening in Chrome."); return; }
@@ -227,13 +279,16 @@ function toggleVoice() {
   const btn = document.getElementById("voiceToggle");
   btn.textContent = voiceOn ? "VOICE: ON" : "VOICE: OFF";
   btn.className = "voice-btn " + (voiceOn ? "on" : "off");
+  document.getElementById("voiceRow").className = "voice-row" + (voiceOn ? " show" : "");
   if (voiceOn) {
     try {
       const u = new SpeechSynthesisUtterance("");
       u.volume = 0;
       speechSynthesis.speak(u);
-      initVoices();
+      setTimeout(populateVoices, 100);
     } catch(e) {}
+  } else {
+    try { speechSynthesis.cancel(); } catch(e) {}
   }
 }
 
@@ -242,11 +297,14 @@ function speakSmack(text) {
   try {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    if (!femaleVoice) initVoices();
-    if (femaleVoice) u.voice = femaleVoice;
-    u.lang = "en-GB";
-    u.rate = 0.95;
-    u.pitch = 1.05;
+    if (chosenVoice) {
+      u.voice = chosenVoice;
+      u.lang = chosenVoice.lang;
+    } else {
+      u.lang = "en-GB";
+    }
+    u.rate = 0.92;
+    u.pitch = 1.0;
     speechSynthesis.speak(u);
   } catch(e) {}
 }

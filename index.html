@@ -192,11 +192,27 @@ const hasSpeech = typeof speechSynthesis !== 'undefined';
 function initVoices() {
   if (!hasSpeech) return;
   const voices = speechSynthesis.getVoices();
-  const prefs = ['female','samantha','victoria','karen','moira','fiona','tessa','Google UK English Female','Microsoft Zira','Google US English'];
+  // Prioritize natural-sounding English female voices
+  const prefs = [
+    'Google UK English Female',
+    'Martha', 'Samantha', 'Karen', 'Moira', 'Fiona', 'Tessa', 'Victoria',
+    'Serena', 'Stephanie', 'Nicky', 'Shelley', 'Kate',
+    'Microsoft Hazel', 'Microsoft Susan', 'Microsoft Zira',
+    'Google US English',
+    'en-GB', 'en-AU',
+  ];
+  // First pass: exact name matches for known good female voices
   for (const pref of prefs) {
-    const v = voices.find(v => v.name.toLowerCase().includes(pref.toLowerCase()) && v.lang.startsWith('en'));
+    const v = voices.find(v => v.name.includes(pref) && v.lang.startsWith('en'));
     if (v) { femaleVoice = v; return; }
   }
+  // Second pass: any voice with "female" in name
+  const f = voices.find(v => v.name.toLowerCase().includes('female') && v.lang.startsWith('en'));
+  if (f) { femaleVoice = f; return; }
+  // Third pass: prefer en-GB for that English woman sound
+  const gb = voices.find(v => v.lang === 'en-GB');
+  if (gb) { femaleVoice = gb; return; }
+  // Fallback: any English voice
   femaleVoice = voices.find(v => v.lang.startsWith('en')) || voices[0] || null;
 }
 
@@ -228,9 +244,9 @@ function speakSmack(text) {
     const u = new SpeechSynthesisUtterance(text);
     if (!femaleVoice) initVoices();
     if (femaleVoice) u.voice = femaleVoice;
-    u.lang = "en-US";
-    u.rate = 1.05;
-    u.pitch = 1.15;
+    u.lang = "en-GB";
+    u.rate = 0.95;
+    u.pitch = 1.05;
     speechSynthesis.speak(u);
   } catch(e) {}
 }
@@ -486,13 +502,19 @@ function showSmack(text, isBig) {
   const el = document.getElementById("smackText");
   el.classList.remove("visible", "big");
   clearTimeout(smackTimer);
-  setTimeout(() => {
-    el.textContent = text;
-    if (isBig) el.classList.add("big");
-    el.classList.add("visible");
+
+  if (voiceOn) {
+    // Voice mode: speak only, no text overlay
     speakSmack(text);
-    smackTimer = setTimeout(() => { el.classList.remove("visible"); }, isBig ? 4500 : 3500);
-  }, 100);
+  } else {
+    // Text mode: show text only, no voice
+    setTimeout(() => {
+      el.textContent = text;
+      if (isBig) el.classList.add("big");
+      el.classList.add("visible");
+      smackTimer = setTimeout(() => { el.classList.remove("visible"); }, isBig ? 4500 : 3500);
+    }, 100);
+  }
 }
 
 function setStatus(text) {

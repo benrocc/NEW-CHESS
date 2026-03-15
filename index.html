@@ -25,18 +25,13 @@
     font-family: 'Orbitron', sans-serif; font-size: 0.7rem; opacity: 0.5;
     letter-spacing: 3px; margin-bottom: 6px; color: #ff2d95;
   }
-  .captured { min-height: 20px; display: flex; align-items: center; gap: 1px; flex-wrap: wrap; justify-content: center; }
-  .cap-w { font-size: 14px; color: #00f0ff; opacity: 0.7; filter: drop-shadow(0 0 3px #00f0ff); }
-  .cap-b { font-size: 14px; color: #ff2d95; opacity: 0.7; filter: drop-shadow(0 0 3px #ff2d95); }
-  .board-wrap {
-    position: relative; margin: 4px 0;
-  }
+  .captured { min-height: 22px; display: flex; align-items: center; gap: 0px; flex-wrap: wrap; justify-content: center; }
+  .board-wrap { position: relative; margin: 4px 0; }
   .board {
     display: grid; border: 1px solid rgba(200,162,255,0.15);
     box-shadow: 0 0 40px rgba(100,0,200,0.2), inset 0 0 20px rgba(0,0,0,0.5);
     border-radius: 3px; overflow: hidden;
   }
-  /* ─── SMACK OVERLAY ─── */
   .smack-overlay {
     position: absolute; top: 0; left: 0; right: 0; bottom: 0;
     display: flex; align-items: center; justify-content: center;
@@ -47,14 +42,12 @@
     color: #ff2d95; text-align: center; padding: 10px 18px;
     text-shadow: 0 0 20px rgba(255,45,149,0.8), 0 0 40px rgba(255,45,149,0.4),
                  2px 2px 0 rgba(0,0,0,0.9), -1px -1px 0 rgba(0,0,0,0.9);
-    background: rgba(0,0,0,0.55); border-radius: 4px;
+    background: rgba(0,0,0,0.6); border-radius: 4px;
     max-width: 90%; line-height: 1.3; letter-spacing: 1px;
     opacity: 0; transform: scale(0.8);
     transition: opacity 0.25s ease, transform 0.25s ease;
   }
-  .smack-text.visible {
-    opacity: 1; transform: scale(1);
-  }
+  .smack-text.visible { opacity: 1; transform: scale(1); }
   .smack-text.big {
     font-size: 1.8rem; color: #ffd700;
     text-shadow: 0 0 20px rgba(255,215,0,0.8), 0 0 40px rgba(255,215,0,0.4),
@@ -75,8 +68,6 @@
     box-shadow: 0 0 6px rgba(255,215,0,0.27);
   }
   .cap-ring { position: absolute; border-radius: 50%; border: 2px solid rgba(255,215,0,0.4); }
-  .piece-w { color: #00f0ff; filter: drop-shadow(0 0 6px #00f0ff) drop-shadow(0 0 2px #00f0ff); line-height: 1; }
-  .piece-b { color: #ff2d95; filter: drop-shadow(0 0 6px #ff2d95) drop-shadow(0 0 2px #ff2d95); line-height: 1; }
   .file-label, .rank-label { position: absolute; font-size: 7px; opacity: 0.2; font-weight: 700; font-family: 'Rajdhani', sans-serif; }
   .file-label { bottom: 1px; right: 3px; }
   .rank-label { top: 1px; left: 3px; }
@@ -106,11 +97,11 @@
   .promo-btn {
     width: 48px; height: 48px; border: 1px solid rgba(0,240,255,0.27); border-radius: 6px;
     background: rgba(0,240,255,0.08); cursor: pointer; display: inline-flex;
-    align-items: center; justify-content: center; font-size: 28px;
-    color: #00f0ff; filter: drop-shadow(0 0 6px #00f0ff); margin: 0 4px;
-    transition: background 0.15s;
+    align-items: center; justify-content: center;
+    margin: 0 4px; transition: background 0.15s; vertical-align: top;
   }
   .promo-btn:hover { background: rgba(0,240,255,0.2); }
+  .piece-svg { filter: drop-shadow(0 0 4px var(--glow)); pointer-events: none; }
 </style>
 </head>
 <body>
@@ -132,10 +123,58 @@
 </div>
 
 <script>
-const P="p",N="n",B="b",R="r",Q="q",K="k",W="w",BL="b";
-const PC={w:{k:"♔",q:"♕",r:"♖",b:"♗",n:"♘",p:"♙"},b:{k:"♚",q:"♛",r:"♜",b:"♝",n:"♞",p:"♟"}};
+const Pp="p",Nn="n",Bb="b",Rr="r",Qq="q",Kk="k",WW="w",BL="b";
 const PV={p:100,n:320,b:330,r:500,q:900,k:20000};
 const FILES=["a","b","c","d","e","f","g","h"];
+
+// SVG piece paths (standard chess piece outlines, viewBox 0 0 45 45)
+const SVG_PATHS = {
+  k: `<g><path d="M22.5 11.63V6M20 8h5" stroke-linejoin="miter" style="fill:none;stroke:STROKE;stroke-width:1.5;stroke-linecap:butt"/>
+      <path d="M22.5 25s4.5-7.5 3-10.5c0 0-1-2.5-3-2.5s-3 2.5-3 2.5c-1.5 3 3 10.5 3 10.5" style="fill:FILL;stroke:STROKE;stroke-width:1.5;stroke-linecap:butt;stroke-linejoin:miter"/>
+      <path d="M12.5 37c5.5 3.5 14.5 3.5 20 0v-7s9-4.5 6-10.5c-4-6.5-13.5-3.5-16 4V27v-3.5c-2.5-7.5-12-10.5-16-4-3 6 6 10.5 6 10.5v7" style="fill:FILL;stroke:STROKE;stroke-width:1.5;stroke-linecap:butt"/>
+      <path d="M12.5 30c5.5-3 14.5-3 20 0M12.5 33.5c5.5-3 14.5-3 20 0M12.5 37c5.5-3 14.5-3 20 0" style="fill:none;stroke:STROKE;stroke-width:1.5"/></g>`,
+  q: `<g><circle cx="6" cy="12" r="2.25" style="fill:FILL;stroke:STROKE;stroke-width:1.5"/>
+      <circle cx="14" cy="9" r="2.25" style="fill:FILL;stroke:STROKE;stroke-width:1.5"/>
+      <circle cx="22.5" cy="8" r="2.25" style="fill:FILL;stroke:STROKE;stroke-width:1.5"/>
+      <circle cx="31" cy="9" r="2.25" style="fill:FILL;stroke:STROKE;stroke-width:1.5"/>
+      <circle cx="39" cy="12" r="2.25" style="fill:FILL;stroke:STROKE;stroke-width:1.5"/>
+      <path d="M9 26c8.5-1.5 21-1.5 27 0l2.5-12.5L31 25l-3.5-7-5 6.5-5-6.5-3.5 7-7.5-14L9 26z" style="fill:FILL;stroke:STROKE;stroke-width:1.5;stroke-linecap:butt;stroke-linejoin:round"/>
+      <path d="M9 26c0 2 1.5 2 2.5 4 1 1.5 1 1 .5 3.5-1.5 1-1.5 2.5-1.5 2.5-1.5 1.5.5 2.5.5 2.5 6.5 1 16.5 1 23 0 0 0 1.5-1 0-2.5 0 0 .5-1.5-1-2.5-.5-2.5-.5-2 .5-3.5 1-2 2.5-2 2.5-4-8.5-1.5-18.5-1.5-27 0z" style="fill:FILL;stroke:STROKE;stroke-width:1.5;stroke-linecap:butt"/>
+      <path d="M11.5 30c3.5-1 18.5-1 22 0M12 33.5c6-1 15-1 21 0" style="fill:none;stroke:STROKE;stroke-width:1"/></g>`,
+  r: `<g><path d="M9 39h27v-3H9v3zM12.5 32l1.5-2.5h17l1.5 2.5h-20zM12 36v-4h21v4H12z" style="fill:FILL;stroke:STROKE;stroke-width:1.5;stroke-linejoin:round"/>
+      <path d="M14 29.5v-13h17v13H14z" style="fill:FILL;stroke:STROKE;stroke-width:1.5;stroke-linecap:butt;stroke-linejoin:miter"/>
+      <path d="M14 16.5L11 14h23l-3 2.5H14zM11 14V9h4v2h5V9h5v2h5V9h4v5H11z" style="fill:FILL;stroke:STROKE;stroke-width:1.5;stroke-linecap:butt"/>
+      <path d="M12 35.5h21M13 31.5h19M14 29.5h17M14 16.5h17M11 14h23" style="fill:none;stroke:STROKE;stroke-width:1;stroke-linejoin:miter"/></g>`,
+  b: `<g><path d="M9 36c3.39-.97 10.11.43 13.5-2 3.39 2.43 10.11 1.03 13.5 2 0 0 1.65.54 3 2-.68.97-1.65.99-3 .5-3.39-.97-10.11.46-13.5-1-3.39 1.46-10.11.03-13.5 1-1.354.49-2.323.47-3-.5 1.354-1.94 3-2 3-2z" style="fill:FILL;stroke:STROKE;stroke-width:1.5;stroke-linecap:butt"/>
+      <path d="M15 32c2.5 2.5 12.5 2.5 15 0 .5-1.5 0-2 0-2 0-2.5-2.5-4-2.5-4 5.5-1.5 6-11.5-5-15.5-11 4-10.5 14-5 15.5 0 0-2.5 1.5-2.5 4 0 0-.5.5 0 2z" style="fill:FILL;stroke:STROKE;stroke-width:1.5;stroke-linecap:butt;stroke-linejoin:round"/>
+      <path d="M25 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 1 1 5 0z" style="fill:FILL;stroke:STROKE;stroke-width:1.5;stroke-linecap:butt"/>
+      <path d="M17.5 26h10M15 30h15" style="fill:none;stroke:STROKE;stroke-width:1.5;stroke-linejoin:miter"/></g>`,
+  n: `<g><path d="M22 10c10.5 1 16.5 8 16 29H15c0-9 10-6.5 8-21" style="fill:FILL;stroke:STROKE;stroke-width:1.5;stroke-linejoin:round"/>
+      <path d="M24 18c.38 2.91-5.55 7.37-8 9-3 2-2.82 4.34-5 4-1.042-.94 1.41-3.04 0-3-1 0 .19 1.23-1 2-1 0-4 1-4-4 0-2 6-12 6-12s1.89-1.9 2-3.5c-.73-.994-.5-2-.5-3 1-1 3 2.5 3 2.5h2s.78-1.992 2.5-3c1 0 1 3 1 3" style="fill:FILL;stroke:STROKE;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"/>
+      <circle cx="14" cy="15.5" r="1" style="fill:DOTFILL"/><circle cx="17" cy="13" r="1" style="fill:DOTFILL"/></g>`,
+  p: `<g><circle cx="22.5" cy="10" r="4" style="fill:FILL;stroke:STROKE;stroke-width:1.5"/>
+      <path d="M18 28c-3 6-10.5 8.5-10.5 13.5h30c0-5-7.5-7.5-10.5-13.5" style="fill:FILL;stroke:STROKE;stroke-width:1.5;stroke-linecap:round"/>
+      <path d="M15.5 24c1-3 4.5-5.5 7-5.5s6 2.5 7 5.5c-2.5 1-5 1.5-7 1.5s-4.5-.5-7-1.5z" style="fill:FILL;stroke:STROKE;stroke-width:1.5"/></g>`,
+};
+
+function makeSVG(type, color, size) {
+  const isW = color === WW;
+  const fill = isW ? "#00f0ff" : "#ff2d95";
+  const stroke = isW ? "#008899" : "#991155";
+  const glow = isW ? "#00f0ff" : "#ff2d95";
+  const dotFill = isW ? "#008899" : "#ff2d95";
+
+  let path = SVG_PATHS[type]
+    .replace(/FILL/g, fill)
+    .replace(/STROKE/g, stroke)
+    .replace(/DOTFILL/g, dotFill);
+
+  return `<svg class="piece-svg" style="--glow:${glow}" width="${size}" height="${size}" viewBox="0 0 45 45" xmlns="http://www.w3.org/2000/svg">${path}</svg>`;
+}
+
+function makeCapSVG(type, color) {
+  return makeSVG(type, color, 18);
+}
 
 const AI_NAMES = [
   "BISHOP SLAYER", "QUEEN KILLER", "PAWN STORM", "DARK HORSE",
@@ -291,13 +330,12 @@ function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
 let board, selected, highlights, turn, enPassant, castling, gameOver, thinking;
 let lastMove, capturedW, capturedB, promoData, aiName, smackTimer, idleTimer, moveCount;
-let smackVisible = false;
 
 function init() {
   board = Array.from({length:8},()=>Array(8).fill(null));
-  const bk=[R,N,B,Q,K,B,N,R];
-  for(let c=0;c<8;c++){board[0][c]={type:bk[c],color:BL};board[1][c]={type:P,color:BL};board[6][c]={type:P,color:W};board[7][c]={type:bk[c],color:W};}
-  selected=null; highlights=[]; turn=W; enPassant=null; gameOver=false; thinking=false;
+  const bk=[Rr,Nn,Bb,Qq,Kk,Bb,Nn,Rr];
+  for(let c=0;c<8;c++){board[0][c]={type:bk[c],color:BL};board[1][c]={type:Pp,color:BL};board[6][c]={type:Pp,color:WW};board[7][c]={type:bk[c],color:WW};}
+  selected=null; highlights=[]; turn=WW; enPassant=null; gameOver=false; thinking=false;
   castling={wk:true,wq:true,bk:true,bq:true}; lastMove=null;
   capturedW=[]; capturedB=[]; promoData=null; moveCount=0;
   aiName = pick(AI_NAMES);
@@ -311,25 +349,19 @@ function init() {
 
 function startIdleTimer() {
   clearTimeout(idleTimer);
-  if (gameOver || thinking || turn !== W) return;
-  idleTimer = setTimeout(() => { if (!gameOver && !thinking && turn === W) showSmack(pick(SMACK.idle), false); }, 15000);
+  if (gameOver || thinking || turn !== WW) return;
+  idleTimer = setTimeout(() => { if (!gameOver && !thinking && turn === WW) showSmack(pick(SMACK.idle), false); }, 15000);
 }
 
 function showSmack(text, isBig) {
   const el = document.getElementById("smackText");
   el.classList.remove("visible", "big");
   clearTimeout(smackTimer);
-
   setTimeout(() => {
     el.textContent = text;
     if (isBig) el.classList.add("big");
     el.classList.add("visible");
-    smackVisible = true;
-
-    smackTimer = setTimeout(() => {
-      el.classList.remove("visible");
-      smackVisible = false;
-    }, isBig ? 4000 : 3500);
+    smackTimer = setTimeout(() => { el.classList.remove("visible"); }, isBig ? 4000 : 3500);
   }, 100);
 }
 
@@ -343,43 +375,43 @@ const clone2 = b => b.map(r=>r.map(c=>c?{...c}:null));
 const inB = (r,c) => r>=0&&r<8&&c>=0&&c<8;
 
 function pseudoMoves(bd,color,ep,cas){
-  const mv=[],opp=color===W?BL:W,dir=color===W?-1:1,sr=color===W?6:1,pr=color===W?0:7;
+  const mv=[],opp=color===WW?BL:WW,dir=color===WW?-1:1,sr=color===WW?6:1,pr=color===WW?0:7;
   for(let r=0;r<8;r++)for(let c=0;c<8;c++){
     const p=bd[r][c]; if(!p||p.color!==color)continue;
-    if(p.type===P){
+    if(p.type===Pp){
       if(inB(r+dir,c)&&!bd[r+dir][c]){
-        if(r+dir===pr){for(const x of[Q,R,B,N])mv.push({fr:r,fc:c,tr:r+dir,tc:c,promo:x});}
+        if(r+dir===pr){for(const x of[Qq,Rr,Bb,Nn])mv.push({fr:r,fc:c,tr:r+dir,tc:c,promo:x});}
         else{mv.push({fr:r,fc:c,tr:r+dir,tc:c});if(r===sr&&!bd[r+2*dir][c])mv.push({fr:r,fc:c,tr:r+2*dir,tc:c});}
       }
       for(const dc of[-1,1]){const nr=r+dir,nc=c+dc;if(!inB(nr,nc))continue;
-        if(bd[nr][nc]&&bd[nr][nc].color===opp){if(nr===pr){for(const x of[Q,R,B,N])mv.push({fr:r,fc:c,tr:nr,tc:nc,promo:x});}else mv.push({fr:r,fc:c,tr:nr,tc:nc});}
+        if(bd[nr][nc]&&bd[nr][nc].color===opp){if(nr===pr){for(const x of[Qq,Rr,Bb,Nn])mv.push({fr:r,fc:c,tr:nr,tc:nc,promo:x});}else mv.push({fr:r,fc:c,tr:nr,tc:nc});}
         if(ep&&ep[0]===nr&&ep[1]===nc)mv.push({fr:r,fc:c,tr:nr,tc:nc,ep:true});
       }
     }
-    if(p.type===N)for(const[dr,dc]of[[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]]){const nr=r+dr,nc=c+dc;if(inB(nr,nc)&&(!bd[nr][nc]||bd[nr][nc].color===opp))mv.push({fr:r,fc:c,tr:nr,tc:nc});}
-    if(p.type===B||p.type===Q)for(const[dr,dc]of[[-1,-1],[-1,1],[1,-1],[1,1]]){let nr=r+dr,nc=c+dc;while(inB(nr,nc)){if(bd[nr][nc]){if(bd[nr][nc].color===opp)mv.push({fr:r,fc:c,tr:nr,tc:nc});break;}mv.push({fr:r,fc:c,tr:nr,tc:nc});nr+=dr;nc+=dc;}}
-    if(p.type===R||p.type===Q)for(const[dr,dc]of[[-1,0],[1,0],[0,-1],[0,1]]){let nr=r+dr,nc=c+dc;while(inB(nr,nc)){if(bd[nr][nc]){if(bd[nr][nc].color===opp)mv.push({fr:r,fc:c,tr:nr,tc:nc});break;}mv.push({fr:r,fc:c,tr:nr,tc:nc});nr+=dr;nc+=dc;}}
-    if(p.type===K){
+    if(p.type===Nn)for(const[dr,dc]of[[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]]){const nr=r+dr,nc=c+dc;if(inB(nr,nc)&&(!bd[nr][nc]||bd[nr][nc].color===opp))mv.push({fr:r,fc:c,tr:nr,tc:nc});}
+    if(p.type===Bb||p.type===Qq)for(const[dr,dc]of[[-1,-1],[-1,1],[1,-1],[1,1]]){let nr=r+dr,nc=c+dc;while(inB(nr,nc)){if(bd[nr][nc]){if(bd[nr][nc].color===opp)mv.push({fr:r,fc:c,tr:nr,tc:nc});break;}mv.push({fr:r,fc:c,tr:nr,tc:nc});nr+=dr;nc+=dc;}}
+    if(p.type===Rr||p.type===Qq)for(const[dr,dc]of[[-1,0],[1,0],[0,-1],[0,1]]){let nr=r+dr,nc=c+dc;while(inB(nr,nc)){if(bd[nr][nc]){if(bd[nr][nc].color===opp)mv.push({fr:r,fc:c,tr:nr,tc:nc});break;}mv.push({fr:r,fc:c,tr:nr,tc:nc});nr+=dr;nc+=dc;}}
+    if(p.type===Kk){
       for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){if(!dr&&!dc)continue;const nr=r+dr,nc=c+dc;if(inB(nr,nc)&&(!bd[nr][nc]||bd[nr][nc].color===opp))mv.push({fr:r,fc:c,tr:nr,tc:nc});}
-      const row=color===W?7:0;
+      const row=color===WW?7:0;
       if(r===row&&c===4){
-        if(cas[color+"k"]&&!bd[row][5]&&!bd[row][6]&&bd[row][7]?.type===R)mv.push({fr:r,fc:c,tr:row,tc:6,castle:"k"});
-        if(cas[color+"q"]&&!bd[row][3]&&!bd[row][2]&&!bd[row][1]&&bd[row][0]?.type===R)mv.push({fr:r,fc:c,tr:row,tc:2,castle:"q"});
+        if(cas[color+"k"]&&!bd[row][5]&&!bd[row][6]&&bd[row][7]?.type===Rr)mv.push({fr:r,fc:c,tr:row,tc:6,castle:"k"});
+        if(cas[color+"q"]&&!bd[row][3]&&!bd[row][2]&&!bd[row][1]&&bd[row][0]?.type===Rr)mv.push({fr:r,fc:c,tr:row,tc:2,castle:"q"});
       }
     }
   }
   return mv;
 }
 
-function findKing(bd,color){for(let r=0;r<8;r++)for(let c=0;c<8;c++)if(bd[r][c]?.type===K&&bd[r][c]?.color===color)return[r,c];return null;}
+function findKing(bd,color){for(let r=0;r<8;r++)for(let c=0;c<8;c++)if(bd[r][c]?.type===Kk&&bd[r][c]?.color===color)return[r,c];return null;}
 
 function isAtt(bd,r,c,by){
-  const dir=by===W?-1:1;
-  for(const dc of[-1,1]){const pr2=r-dir,pc=c+dc;if(inB(pr2,pc)&&bd[pr2][pc]?.type===P&&bd[pr2][pc]?.color===by)return true;}
-  for(const[dr,dc]of[[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]]){const nr=r+dr,nc=c+dc;if(inB(nr,nc)&&bd[nr][nc]?.type===N&&bd[nr][nc]?.color===by)return true;}
-  for(const[dr,dc]of[[-1,-1],[-1,1],[1,-1],[1,1]]){let nr=r+dr,nc=c+dc;while(inB(nr,nc)){if(bd[nr][nc]){if(bd[nr][nc].color===by&&(bd[nr][nc].type===B||bd[nr][nc].type===Q))return true;break;}nr+=dr;nc+=dc;}}
-  for(const[dr,dc]of[[-1,0],[1,0],[0,-1],[0,1]]){let nr=r+dr,nc=c+dc;while(inB(nr,nc)){if(bd[nr][nc]){if(bd[nr][nc].color===by&&(bd[nr][nc].type===R||bd[nr][nc].type===Q))return true;break;}nr+=dr;nc+=dc;}}
-  for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){if(!dr&&!dc)continue;const nr=r+dr,nc=c+dc;if(inB(nr,nc)&&bd[nr][nc]?.type===K&&bd[nr][nc]?.color===by)return true;}
+  const dir=by===WW?-1:1;
+  for(const dc of[-1,1]){const pr2=r-dir,pc=c+dc;if(inB(pr2,pc)&&bd[pr2][pc]?.type===Pp&&bd[pr2][pc]?.color===by)return true;}
+  for(const[dr,dc]of[[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]]){const nr=r+dr,nc=c+dc;if(inB(nr,nc)&&bd[nr][nc]?.type===Nn&&bd[nr][nc]?.color===by)return true;}
+  for(const[dr,dc]of[[-1,-1],[-1,1],[1,-1],[1,1]]){let nr=r+dr,nc=c+dc;while(inB(nr,nc)){if(bd[nr][nc]){if(bd[nr][nc].color===by&&(bd[nr][nc].type===Bb||bd[nr][nc].type===Qq))return true;break;}nr+=dr;nc+=dc;}}
+  for(const[dr,dc]of[[-1,0],[1,0],[0,-1],[0,1]]){let nr=r+dr,nc=c+dc;while(inB(nr,nc)){if(bd[nr][nc]){if(bd[nr][nc].color===by&&(bd[nr][nc].type===Rr||bd[nr][nc].type===Qq))return true;break;}nr+=dr;nc+=dc;}}
+  for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){if(!dr&&!dc)continue;const nr=r+dr,nc=c+dc;if(inB(nr,nc)&&bd[nr][nc]?.type===Kk&&bd[nr][nc]?.color===by)return true;}
   return false;
 }
 
@@ -391,7 +423,7 @@ function applyMv(bd,m){
 }
 
 function legal(bd,color,ep,cas){
-  const ps=pseudoMoves(bd,color,ep,cas),opp=color===W?BL:W;
+  const ps=pseudoMoves(bd,color,ep,cas),opp=color===WW?BL:WW;
   return ps.filter(m=>{
     if(m.castle){const row=m.fr;if(isAtt(bd,row,4,opp))return false;
       if(m.castle==="k"&&(isAtt(bd,row,5,opp)||isAtt(bd,row,6,opp)))return false;
@@ -417,29 +449,29 @@ const PST_R=[[0,0,0,0,0,0,0,0],[5,10,10,10,10,10,10,5],[-5,0,0,0,0,0,0,-5],[-5,0
 const PST={p:PST_P,n:PST_N,b:PST_B,r:PST_R};
 
 function evalBd(bd){
-  let s=0;for(let r=0;r<8;r++)for(let c=0;c<8;c++){const p=bd[r][c];if(!p)continue;const sg=p.color===W?1:-1;s+=sg*PV[p.type];const t=PST[p.type];if(t)s+=sg*t[p.color===W?r:7-r][c];}
+  let s=0;for(let r=0;r<8;r++)for(let c=0;c<8;c++){const p=bd[r][c];if(!p)continue;const sg=p.color===WW?1:-1;s+=sg*PV[p.type];const t=PST[p.type];if(t)s+=sg*t[p.color===WW?r:7-r][c];}
   return s;
 }
 
-function materialScore(bd) {
+function materialScore(bd){
   let w=0,b=0;
-  for(let r=0;r<8;r++)for(let c=0;c<8;c++){const p=bd[r][c];if(!p)continue;if(p.color===W)w+=PV[p.type];else b+=PV[p.type];}
-  return {w,b};
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){const p=bd[r][c];if(!p)continue;if(p.color===WW)w+=PV[p.type];else b+=PV[p.type];}
+  return{w,b};
 }
 
 function ab(bd,depth,alpha,beta,isW,ep,cas){
-  const color=isW?W:BL,mvs=legal(bd,color,ep,cas);
-  if(mvs.length===0){const kp=findKing(bd,color),opp=isW?BL:W;if(kp&&isAtt(bd,kp[0],kp[1],opp))return isW?-999999:999999;return 0;}
+  const color=isW?WW:BL,mvs=legal(bd,color,ep,cas);
+  if(mvs.length===0){const kp=findKing(bd,color),opp=isW?BL:WW;if(kp&&isAtt(bd,kp[0],kp[1],opp))return isW?-999999:999999;return 0;}
   if(depth===0)return evalBd(bd);
   mvs.sort((a,b2)=>{const ca=bd[a.tr][a.tc]?PV[bd[a.tr][a.tc].type]:0,cb=bd[b2.tr][b2.tc]?PV[bd[b2.tr][b2.tc].type]:0;return cb-ca;});
-  if(isW){let best=-Infinity;for(const m of mvs){const nb=applyMv(bd,m);let nep=null;if(bd[m.fr][m.fc]?.type===P&&Math.abs(m.tr-m.fr)===2)nep=[(m.fr+m.tr)/2,m.fc];best=Math.max(best,ab(nb,depth-1,alpha,beta,false,nep,updCas(cas,m)));alpha=Math.max(alpha,best);if(alpha>=beta)break;}return best;}
-  else{let best=Infinity;for(const m of mvs){const nb=applyMv(bd,m);let nep=null;if(bd[m.fr][m.fc]?.type===P&&Math.abs(m.tr-m.fr)===2)nep=[(m.fr+m.tr)/2,m.fc];best=Math.min(best,ab(nb,depth-1,alpha,beta,true,nep,updCas(cas,m)));beta=Math.min(beta,best);if(alpha>=beta)break;}return best;}
+  if(isW){let best=-Infinity;for(const m of mvs){const nb=applyMv(bd,m);let nep=null;if(bd[m.fr][m.fc]?.type===Pp&&Math.abs(m.tr-m.fr)===2)nep=[(m.fr+m.tr)/2,m.fc];best=Math.max(best,ab(nb,depth-1,alpha,beta,false,nep,updCas(cas,m)));alpha=Math.max(alpha,best);if(alpha>=beta)break;}return best;}
+  else{let best=Infinity;for(const m of mvs){const nb=applyMv(bd,m);let nep=null;if(bd[m.fr][m.fc]?.type===Pp&&Math.abs(m.tr-m.fr)===2)nep=[(m.fr+m.tr)/2,m.fc];best=Math.min(best,ab(nb,depth-1,alpha,beta,true,nep,updCas(cas,m)));beta=Math.min(beta,best);if(alpha>=beta)break;}return best;}
 }
 
 function aiThink2(bd,ep,cas){
   const mvs=legal(bd,BL,ep,cas);if(mvs.length===0)return null;
   let best=mvs[0],bestVal=Infinity;
-  for(const m of mvs){const nb=applyMv(bd,m);let nep=null;if(bd[m.fr][m.fc]?.type===P&&Math.abs(m.tr-m.fr)===2)nep=[(m.fr+m.tr)/2,m.fc];
+  for(const m of mvs){const nb=applyMv(bd,m);let nep=null;if(bd[m.fr][m.fc]?.type===Pp&&Math.abs(m.tr-m.fr)===2)nep=[(m.fr+m.tr)/2,m.fc];
     const val=ab(nb,3,-Infinity,Infinity,true,nep,updCas(cas,m));if(val<bestVal){bestVal=val;best=m;}}
   return best;
 }
@@ -448,125 +480,92 @@ function execMove(move) {
   const cap = board[move.tr][move.tc];
   const capType = cap?.type;
   board = applyMv(board, move);
-
-  if (cap) { if(cap.color===W) capturedW.push(cap.type); else capturedB.push(cap.type); }
-  if (move.ep) { if(turn===W) capturedB.push(P); else capturedW.push(P); }
-
+  if (cap) { if(cap.color===WW) capturedW.push(cap.type); else capturedB.push(cap.type); }
+  if (move.ep) { if(turn===WW) capturedB.push(Pp); else capturedW.push(Pp); }
   let newEp = null;
-  if (board[move.tr][move.tc]?.type === P && Math.abs(move.tr - move.fr) === 2)
+  if (board[move.tr][move.tc]?.type === Pp && Math.abs(move.tr - move.fr) === 2)
     newEp = [(move.fr + move.tr) / 2, move.fc];
   enPassant = newEp;
   castling = updCas(castling, move);
   lastMove = [move.fr, move.fc, move.tr, move.tc];
-  selected = null; highlights = [];
-  moveCount++;
+  selected = null; highlights = []; moveCount++;
 
-  const nextColor = turn === W ? BL : W;
+  const nextColor = turn === WW ? BL : WW;
   const nextMvs = legal(board, nextColor, enPassant, castling);
   const kp = findKing(board, nextColor);
   const inCheck = kp && isAtt(board, kp[0], kp[1], turn);
 
   if (nextMvs.length === 0) {
     if (inCheck) {
-      if (turn === W) { showSmack(pick(SMACK.playerWin), true); setStatus("Checkmate. You win!"); }
+      if (turn === WW) { showSmack(pick(SMACK.playerWin), true); setStatus("Checkmate. You win!"); }
       else { showSmack(pick(SMACK.aiWin), true); setStatus("Checkmate. " + aiName + " wins."); }
-    } else {
-      showSmack(pick(SMACK.stalemate), true); setStatus("Stalemate. Draw.");
-    }
+    } else { showSmack(pick(SMACK.stalemate), true); setStatus("Stalemate. Draw."); }
     gameOver = true; turn = nextColor; render(); return;
   }
 
-  // Smack talk logic
   if (turn === BL) {
-    // AI just moved
     if (cap) {
-      if (capType === Q) showSmack(pick(SMACK.aiCaptureQueen), true);
-      else if (capType === R) showSmack(pick(SMACK.aiCaptureRook), false);
+      if (capType === Qq) showSmack(pick(SMACK.aiCaptureQueen), true);
+      else if (capType === Rr) showSmack(pick(SMACK.aiCaptureRook), false);
       else showSmack(pick(SMACK.aiCapture), false);
-    } else if (inCheck) {
-      showSmack(pick(SMACK.aiCheck), true);
-    } else {
-      const ms = materialScore(board);
-      if (ms.b > ms.w + 250 && Math.random() > 0.3) showSmack(pick(SMACK.aiWinning), false);
-    }
+    } else if (inCheck) { showSmack(pick(SMACK.aiCheck), true); }
+    else { const ms = materialScore(board); if (ms.b > ms.w + 250 && Math.random() > 0.3) showSmack(pick(SMACK.aiWinning), false); }
   } else {
-    // Player just moved
     if (cap) {
-      if (capType === Q) showSmack(pick(SMACK.playerCaptureQueen), false);
+      if (capType === Qq) showSmack(pick(SMACK.playerCaptureQueen), false);
       else showSmack(pick(SMACK.playerCapture), false);
-    } else if (inCheck) {
-      showSmack(pick(SMACK.playerCheck), false);
-    } else {
-      const ms = materialScore(board);
-      if (ms.w > ms.b + 250 && Math.random() > 0.3) showSmack(pick(SMACK.aiLosing), false);
-    }
+    } else if (inCheck) { showSmack(pick(SMACK.playerCheck), false); }
+    else { const ms = materialScore(board); if (ms.w > ms.b + 250 && Math.random() > 0.3) showSmack(pick(SMACK.aiLosing), false); }
   }
 
-  if (inCheck) setStatus(nextColor === W ? "Check! Your move." : "Check. " + aiName + " thinking...");
-  else setStatus(nextColor === W ? "Your move." : aiName + " thinking...");
-
+  if (inCheck) setStatus(nextColor === WW ? "Check! Your move." : "Check. " + aiName + " thinking...");
+  else setStatus(nextColor === WW ? "Your move." : aiName + " thinking...");
   turn = nextColor;
 
   if (turn === BL) {
-    thinking = true;
-    render();
+    thinking = true; render();
     setTimeout(() => {
       const am = aiThink2(board, enPassant, castling);
       if (am) { turn = BL; execMove(am); }
-      thinking = false;
-      turn = W;
-      render();
-      startIdleTimer();
+      thinking = false; turn = WW; render(); startIdleTimer();
     }, 250);
-  } else {
-    render();
-    startIdleTimer();
-  }
+  } else { render(); startIdleTimer(); }
 }
 
 function handleClick(r, c) {
-  if (thinking || gameOver || turn !== W) return;
+  if (thinking || gameOver || turn !== WW) return;
   clearTimeout(idleTimer);
-  const mvs = legal(board, W, enPassant, castling);
-
+  const mvs = legal(board, WW, enPassant, castling);
   if (selected) {
     const move = mvs.find(m => m.fr===selected[0]&&m.fc===selected[1]&&m.tr===r&&m.tc===c&&!m.promo);
     const promo = mvs.find(m => m.fr===selected[0]&&m.fc===selected[1]&&m.tr===r&&m.tc===c&&m.promo);
     if (promo) { promoData={fr:selected[0],fc:selected[1],tr:r,tc:c}; selected=null; highlights=[]; showPromo(); render(); return; }
     if (move) { execMove(move); return; }
   }
-
   const piece = board[r][c];
-  if (piece && piece.color === W) {
+  if (piece && piece.color === WW) {
     selected = [r, c];
     highlights = mvs.filter(m => m.fr===r&&m.fc===c).map(m=>[m.tr,m.tc]);
   } else { selected = null; highlights = []; }
-  render();
-  startIdleTimer();
+  render(); startIdleTimer();
 }
 
 function showPromo() {
-  const ov = document.getElementById("promoOverlay");
-  ov.style.display = "flex";
-  const btns = document.getElementById("promoButtons");
-  btns.innerHTML = "";
-  for (const t of [Q, R, B, N]) {
-    const b = document.createElement("button");
-    b.className = "promo-btn"; b.textContent = PC[W][t];
-    b.onclick = () => {
-      ov.style.display = "none";
-      const m = {fr:promoData.fr,fc:promoData.fc,tr:promoData.tr,tc:promoData.tc,promo:t};
-      promoData = null; execMove(m);
-    };
+  const ov = document.getElementById("promoOverlay"); ov.style.display = "flex";
+  const btns = document.getElementById("promoButtons"); btns.innerHTML = "";
+  for (const t of [Qq, Rr, Bb, Nn]) {
+    const b = document.createElement("button"); b.className = "promo-btn";
+    b.innerHTML = makeSVG(t, WW, 32);
+    b.onclick = () => { ov.style.display = "none"; const m = {fr:promoData.fr,fc:promoData.fc,tr:promoData.tr,tc:promoData.tc,promo:t}; promoData = null; execMove(m); };
     btns.appendChild(b);
   }
 }
 
 function render() {
   const maxW = Math.min(window.innerWidth - 32, 480);
-  const maxH = window.innerHeight - 240;
+  const maxH = window.innerHeight - 220;
   const sq = Math.max(32, Math.min(Math.floor(Math.min(maxW, maxH) / 8), 56));
-  const fs = Math.max(16, sq * 0.65);
+  const pSize = Math.max(22, Math.round(sq * 0.78));
 
   const bEl = document.getElementById("board");
   bEl.style.gridTemplateColumns = `repeat(8, ${sq}px)`;
@@ -598,26 +597,23 @@ function render() {
       div.appendChild(ring);
     }
     if (cell) {
-      const sp = document.createElement("span");
-      sp.className = cell.color===W?"piece-w":"piece-b";
-      sp.style.fontSize = fs+"px"; sp.textContent = PC[cell.color][cell.type];
-      div.appendChild(sp);
+      const wrap = document.createElement("div");
+      wrap.innerHTML = makeSVG(cell.type, cell.color, pSize);
+      wrap.style.display = "flex"; wrap.style.alignItems = "center"; wrap.style.justifyContent = "center";
+      div.appendChild(wrap);
     }
-
     div.onclick = () => handleClick(r, c);
     bEl.appendChild(div);
   }
 
-  const order = [Q,R,B,N,P];
-  const cwEl = document.getElementById("capWhite");
-  cwEl.innerHTML = "";
+  const order = [Qq,Rr,Bb,Nn,Pp];
+  const cwEl = document.getElementById("capWhite"); cwEl.innerHTML = "";
   [...capturedW].sort((a,b2)=>order.indexOf(a)-order.indexOf(b2)).forEach(t => {
-    const sp = document.createElement("span"); sp.className="cap-w"; sp.textContent=PC[W][t]; cwEl.appendChild(sp);
+    const sp = document.createElement("span"); sp.innerHTML = makeCapSVG(t, WW); sp.style.display="inline-block"; cwEl.appendChild(sp);
   });
-  const cbEl = document.getElementById("capBlack");
-  cbEl.innerHTML = "";
+  const cbEl = document.getElementById("capBlack"); cbEl.innerHTML = "";
   [...capturedB].sort((a,b2)=>order.indexOf(a)-order.indexOf(b2)).forEach(t => {
-    const sp = document.createElement("span"); sp.className="cap-b"; sp.textContent=PC[BL][t]; cbEl.appendChild(sp);
+    const sp = document.createElement("span"); sp.innerHTML = makeCapSVG(t, BL); sp.style.display="inline-block"; cbEl.appendChild(sp);
   });
 }
 
